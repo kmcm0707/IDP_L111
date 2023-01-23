@@ -38,53 +38,33 @@ void loop() {
   uint8_t i;
   left_sensorValue = analogRead(left_line_follower);
   Serial.println(left_sensorValue);
-  m1->run(FORWARD);
-  for (i=0; i<255; i++) {
-    m1->setSpeed(i);
-    delay(10);
-  }
-  for (i=255; i!=0; i--) {
-    m1->setSpeed(i);
-    delay(10);
-  }
-
-  Serial.print("tock");
-
-  m1->run(BACKWARD);
-  for (i=0; i<255; i++) {
-    m1->setSpeed(i);
-    delay(10);
-  }
-  for (i=255; i!=0; i--) {
-    m1->setSpeed(i);
-    delay(10);
-  }
-
-  Serial.print("tech");
-  m1->run(RELEASE);
-  delay(10);
+  line_following();
 }
+
 void line_following(){
+  m1->setSpeed(150);
+  m2->setSpeed(150);
   if(analogRead(left_line_follower) > linefollower_trigger &&  analogRead(right_line_follower) > linefollower_trigger) // Move Forward
   {
   m1->run(FORWARD);
   m2->run(FORWARD);
   }
   
-  if(analogRead(left_line_follower) > linefollower_trigger &&  analogRead(right_line_follower) > linefollower_trigger) // Turn right
+  if(analogRead(left_line_follower) > linefollower_trigger &&  analogRead(right_line_follower) < linefollower_trigger) // Turn right
   {
   m1->run(BACKWARD);
   m2->run(FORWARD);
   }
   
-  if(analogRead(left_line_follower) > linefollower_trigger &&  analogRead(right_line_follower) > linefollower_trigger) // turn left
+  if(analogRead(left_line_follower) < linefollower_trigger &&  analogRead(right_line_follower) > linefollower_trigger) // turn left
   {
   m1->run(FORWARD);
   m2->run(BACKWARD);
   }
   
-  if(analogRead(left_line_follower) > linefollower_trigger &&  analogRead(right_line_follower) > linefollower_trigger) // stop !(digitalRead(LS)) && !(digitalRead(RS))
+  if(analogRead(left_line_follower) < linefollower_trigger &&  analogRead(right_line_follower) < linefollower_trigger) // stop !(digitalRead(LS)) && !(digitalRead(RS))
   {
-  
+  m1->run(RELEASE);
+  m2->run(RELEASE);
   }
 }
