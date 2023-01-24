@@ -1,4 +1,6 @@
+#include <Wire.h>
 #include <Adafruit_MotorShield.h>
+#include "utility/Adafruit_MS_PWMServoDriver.h"
 
 Adafruit_MotorShield AFMS = Adafruit_MotorShield();
 
@@ -10,6 +12,8 @@ int right_line_follower = A1;
 int left_sensorValue = 0;
 int right_sensorValue = 0;
 int linefollower_trigger = 600;
+
+int colourDetection_trigger = 500;
 void setup() {
   Serial.begin(9600);
 
@@ -26,19 +30,20 @@ void setup() {
   Serial.println("Motor Shield found.");
 
   // Set the speed to start, from 0 (off) to 255 (max speed)
-  m1->setSpeed(150);
-  m2->setSpeed(150);
+  m1->setSpeed(250);
+  m2->setSpeed(250);
   m1->run(FORWARD);
+  m2->run(FORWARD);
   // turn on motor
-  m1->run(RELEASE);
-  
 }
 
 void loop() {
   uint8_t i;
-  left_sensorValue = analogRead(left_line_follower);
-  Serial.println(left_sensorValue);
-  line_following();
+  //left_sensorValue = analogRead(left_line_follower);
+  //Serial.println(left_sensorValue);
+  m1->run(FORWARD);
+  m2->run(FORWARD);
+  delay(10);
 }
 
 void line_following(){
