@@ -1,6 +1,11 @@
 import cv2
-import time
 import numpy as np
+
+"""Main code for computer vision
+
+there as 3 different detect red function because open cv requires cv2.waitKey()
+to work. if that is outside of the function it wont work.
+"""
 
 
 def detect_line(frame):
@@ -22,6 +27,7 @@ def detect_line(frame):
 
 
 def detect_red(frame):
+    # detecting red cube in video
 
     # TODO: do the processing in particular section of the image
 
@@ -63,7 +69,8 @@ def detect_red(frame):
     for x, y, w, h in centres:
         if (x < half) and (x > 180):
             cv2.rectangle(frame, (x, y), (x+w, y+h), (255, 0, 0))
-            # cv2.putText(frame, f"{x}, {y}, {cv2.contourArea(cont)}", (x, y), font, 0.5, (255, 0, 0))
+            cv2.putText(frame, f"{x}, {y}, {cv2.contourArea(cont)}", (x, y),
+                        font, 0.5, (255, 0, 0))
 
             # print(f"cubes at : {x, y}")
 
@@ -83,31 +90,35 @@ def detect_red(frame):
 
 
 def detect_red_video(video):
+    # detecting red cube in video
 
     while True:
         check, frame = video.read()
-        
+
+        # conveting from RGB to HSV
         hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+
+        # red threshold values
         lower_red = np.array([120, 70, 80])
-
-        # lower_red = cv2.cvtColor([192, 107, 117])
-
         upper_red = np.array([180, 255, 255])
 
-        # Threshold the HSV image to get only blue colours
+        # one is ranges shows up white and else in black
         mask = cv2.inRange(hsv, lower_red, upper_red)
 
+        # noise reduction
         kernel = np.ones((7, 7), np.uint8)
         mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
         mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
 
+        # finding contours
         contours, hierarchy = cv2.findContours(
             mask.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
+        # drawing rectangles
         centres = []
         for cont in contours:
-            """if cv2.contourArea(cont) <= 20:
-                continue"""
+            if cv2.contourArea(cont) <= 50:
+                continue
             x, y, w, h = cv2.boundingRect(cont)
 
             centres.append((x, y, w, h))
@@ -118,14 +129,66 @@ def detect_red_video(video):
             if (x < half) and (x > 180):
                 cv2.rectangle(frame, (x, y), (x+w, y+h), (255, 0, 0))
 
+        # showing the feed with rectangles
         cv2.imshow('frame', frame)
 
+        # for stopping the window wont run without it
+        # see file docstring for detail
         key = cv2.waitKey(2)
         if key == ord('q'):
             return
 
 
+def detect_red_stream(stream):
+    # detects red cubes in stream (*untested)
 
+    while stream.isOpend():
+        check, frame = stream.read()
+
+        if not check:
+            return
+        # converting from RGB to HVS
+        hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+
+        # threshold red values
+        lower_red = np.array([120, 70, 80])
+        upper_red = np.array([180, 255, 255])
+
+        # one is ranges shows up white and else in black
+        mask = cv2.inRange(hsv, lower_red, upper_red)
+
+        # noise reduction
+        kernel = np.ones((7, 7), np.uint8)
+        mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
+        mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
+
+        # finding contours
+        contours, hierarchy = cv2.findContours(
+            mask.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+        # drawing rectangle where the object was located
+        centres = []
+        for cont in contours:
+            if cv2.contourArea(cont) <= 50:
+                continue
+            x, y, w, h = cv2.boundingRect(cont)
+
+            centres.append((x, y, w, h))
+
+        dim = frame.shape
+        half = (dim[1]*0.5)
+        for x, y, w, h in centres:
+            if (x < half) and (x > 180):
+                cv2.rectangle(frame, (x, y), (x+w, y+h), (255, 0, 0))
+
+        # showing the feed with the rectangle
+        cv2.imshow('frame', frame)
+
+        # for stopping the window (wont run without it)
+        # see file docstring for detail
+        key = cv2.waitKey(2)
+        if key == ord('q'):
+            return
 
 
 if __name__ == "__main__":
@@ -141,12 +204,17 @@ if __name__ == "__main__":
         detect_red(img)"""
 
     # this tries to apply this object detection with camera
-
-    # for mjpeg stream replace the 0 with the url after connecting through ssh
     video = cv2.VideoCapture(0)
 
     detect_red_video(video)
 
     video.release()
 
-    cv2.destroyAllWindows()
+    # this code works for the mjpeg stream
+    """stream = cv2.VideoCapture(
+        "http://idpcam1.eng.cam.ac.uk:8080/stream/video.mjpeg")
+
+    detect_red_stream()
+    stream.release()
+
+    cv2.destroyAllWindows()"""
