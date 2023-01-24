@@ -27,7 +27,7 @@ def detect_red(frame):
 
     # define range of blue color in HSV
 
-    lower_red = np.array([120, 90, 80])
+    lower_red = np.array([120, 70, 80])
 
     # lower_red = cv2.cvtColor([192, 107, 117])
 
@@ -35,12 +35,22 @@ def detect_red(frame):
 
     # Threshold the HSV image to get only blue colours
     mask = cv2.inRange(hsv, lower_red, upper_red)
+    
+    kernel = np.ones((7, 7), np.uint8)
+    mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
+    mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
+
+    segmented_img = cv2.bitwise_and(frame, frame, mask=mask)
+    contours, hierarchy = cv2.findContours(mask.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    seg_output = cv2.drawContours(segmented_img, contours, -1, (0, 255, 0), 3)
+    output = cv2.drawContours(frame, contours, -1, (0, 255, 0), 3)
+    cv2.imshow('output', output)
 
     # Bitwise-AND mask and original image
     res = cv2.bitwise_and(frame, frame, mask=mask)
 
     # cv2.imshow('frame', frame)
-    cv2.imshow('mask', mask)
+    # cv2.imshow('mask', mask)
     # cv2.imshow('res', res)
     cv2.waitKey(0)
 
