@@ -193,11 +193,11 @@ def detect_red_stream(stream):
 
 if __name__ == "__main__":
 
-    """# For lines
-    for i in range(1, 9):
-        img = cv2.imread(f"../CV/test_imgs/{i}.png")
-        detect_line(img)
-"""
+    # For lines
+    """for i in range(1, 9):
+        img = cv2.imread(f"CV/test_imgs/{i}.png")
+        detect_line(img)"""
+
     """# For blocks
     for i in range(1, 9):
         img = cv2.imread(f"../CV/test_imgs/{i}.png")
