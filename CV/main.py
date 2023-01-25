@@ -142,7 +142,7 @@ def detect_red_video(video):
 def detect_red_stream(stream):
     # detects red cubes in stream (*untested)
 
-    while stream.isOpend():
+    while stream.isOpened():
         check, frame = stream.read()
 
         if not check:
@@ -204,17 +204,17 @@ if __name__ == "__main__":
         detect_red(img)"""
 
     # this tries to apply this object detection with camera
-    video = cv2.VideoCapture(0)
+    """video = cv2.VideoCapture(0)
 
     detect_red_video(video)
 
-    video.release()
+    video.release()"""
 
     # this code works for the mjpeg stream
-    """stream = cv2.VideoCapture(
-        "http://idpcam1.eng.cam.ac.uk:8080/stream/video.mjpeg")
+    stream = cv2.VideoCapture(
+        "http://localhost:8081/stream/video.mjpeg")
 
-    detect_red_stream()
+    detect_red_stream(stream)
     stream.release()
 
-    cv2.destroyAllWindows()"""
+    cv2.destroyAllWindows()
