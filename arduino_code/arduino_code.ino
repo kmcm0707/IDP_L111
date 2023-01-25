@@ -15,10 +15,15 @@ int outer_right_follower = A3;
 //int right_sensorValue = 0;
 int linefollower_trigger = 600;
 
+// colour detection
 int detect_blue = 1;
 int detect_red = 2;
-int read_blue = 3;
-int read_red = 4;
+int output_blue = 3;
+int output_red = 4;
+
+// ultrasound
+const int trigPin = 9;
+const int echoPin = 10;
 
 void setup() {
   Serial.begin(9600);
@@ -43,10 +48,6 @@ void setup() {
 
 
   //colour detection
-  int detect_blue = 1;
-  int detect_red = 2;
-  int output_blue = 3;
-  int output_red = 4;
   pinMode(detect_blue, INPUT);
   pinMode(detect_red, INPUT);
   pinMode(output_blue, OUTPUT);
@@ -131,10 +132,6 @@ void line_follower_feedback() {
 }
 
 void colour_detection(){
-  int detect_blue = 1;
-  int detect_red = 2;
-  int output_blue = 3;
-  int output_red = 4;
   if(digitalRead(detect_blue) == 1){
     digitalWrite(output_blue, HIGH);
     delay(2000);
@@ -145,4 +142,16 @@ void colour_detection(){
     delay(2000);
     digitalWrite(output_red, LOW);
   }
+}
+
+void ultrasound() {
+  long duration;
+  int distanceCm;
+  digitalWrite(trigPin, LOW);
+  delayMicroseconds(2);
+  digitalWrite(trigPin, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(trigPin, LOW);
+  duration = pulseIn(echoPin, HIGH);
+  distanceCm = duration * 0.034 / 2;
 }
