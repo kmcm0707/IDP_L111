@@ -3,7 +3,7 @@ import numpy as np
 import time
 import glob
 
-CHECKERBOARD = (4, 9)
+CHECKERBOARD = (7, 6)
 
 subpix_criteria = (cv2.TERM_CRITERIA_EPS+cv2.TERM_CRITERIA_MAX_ITER, 30, 0.1)
 
@@ -11,53 +11,62 @@ calibration_flags = cv2.fisheye.CALIB_RECOMPUTE_EXTRINSIC + cv2.fisheye.CALIB_FI
 
 objp = np.zeros((1, CHECKERBOARD[0]*CHECKERBOARD[1], 3), np.float32)
 
-objp[0,:,:2] = np.mgrid[0:CHECKERBOARD[0], 0:CHECKERBOARD[1]].T.reshape(-1, 2)
+objp[0,:,:2] = np.mgrid[0:CHECKERBOARD[0], 0:CHECKERBOARD[1]].T.reshape(-1, 2)*33
 _img_shape = None
 objpoints = [] # 3d point in real world space
 imgpoints = [] # 2d points in image plane.images = glob.glob('*.jpg')for fname in images:
 
 # video = cv2.VideoCapture("http://localhost:8081/stream/video.mjpeg")
-video = cv2.VideoCapture(0)
-# images = glob.glob('calib_imgs/mac_webcam/*.jpg')
-# for fname in images:
-t = time.time()
-while True:
-    # img = cv2.imread(fname)
+# video = cv2.VideoCapture(0)
+images = glob.glob('img_dump_manual/*.jpg')
+for fname in images:
+
+# while True:
+    img = cv2.imread(fname)
     print("frame")
     # video.set(cv2.CAP_PROP_FRAME_COUNT, int(t*20))
-    check, img = video.read()
+    # check, img = video.read()
     if _img_shape == None:
         _img_shape = img.shape[:2]
     else:
         assert _img_shape == img.shape[:2], "All images must share the same size."    
     
     gray = cv2.cvtColor(img.copy(), cv2.COLOR_BGR2GRAY)
+
+    mask = cv2.inRange(gray, 0, 200)
+    mask = cv2.bitwise_not(mask)
+    kernel = np.ones((7, 7), np.uint8)
+    mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
+    cv2.imshow("mask", mask)
+    cv2.waitKey()
+    # continue
     # Find the chess board corners
-    ret, corners = cv2.findCirclesGrid(gray, CHECKERBOARD, cv2.CALIB_CB_ASYMMETRIC_GRID +cv2.CALIB_CB_FAST_CHECK+cv2.CALIB_CB_NORMALIZE_IMAGE)
+    ret, corners = cv2.findChessboardCorners(gray, CHECKERBOARD, cv2.CALIB_CB_ADAPTIVE_THRESH + cv2.CALIB_CB_FAST_CHECK+cv2.CALIB_CB_NORMALIZE_IMAGE)
     # If found, add object points, image points (after refining them)
     if ret == True:
         print("corner found")
         objpoints.append(objp)
         cv2.cornerSubPix(gray, corners, (3, 3), (-1, -1), subpix_criteria)
         imgpoints.append(corners)
-        # cv2.drawChessboardCorners(img, (7, 6), corners, ret)
-        time.sleep(2)
         
-        # cv2.imshow("Calibration sequence", img)
-        key = cv2.waitKey(1)
+        cv2.drawChessboardCorners(mask, (7, 6), corners, ret)
+        # time.sleep(2)
+        
+        """cv2.imshow("Calibration sequence", img)
+        key = cv2.waitKey()
         if key == ord("q"):
             break
         elif key == ord("w"):
-            continue
+            continue"""
 
-    cv2.imshow("Calibration sequence", img)
+    cv2.imshow("Calibration sequence", mask)
 
     key = cv2.waitKey(1)
     if key == ord("q"):
         break
 
-video.release()
-
+# video.release()
+# exit()
 N_OK = len(objpoints)
 K = np.zeros((3, 3))
 D = np.zeros((4, 1))
@@ -112,3 +121,6 @@ for i in range(len(objpoints)):
 print( "total error: {}".format(mean_error/len(objpoints)) )
 
 cv2.destroyAllWindows()
+
+def check_pattern(img):
+    

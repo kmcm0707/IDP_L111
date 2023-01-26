@@ -51,26 +51,22 @@ def process(img):
     return img
 
 
-
-
 video = cv2.VideoCapture("http://localhost:8081/stream/video.mjpeg")
 # video = cv2.VideoCapture(0)
 
 # stored_frame = []
 count = 1
 while True:
-    if (count % 10) != 0:
-        check, img = video.read()
-        count += 1
-        continue
-         
+
     check, img = video.read()
     key = cv2.waitKey(1)
     if key == ord("q"):
         break
+    if key == ord("w"):
+        cv2.imwrite(f"img_dump_manual_table3/{count}.jpg", img)
+        count += 1
+
     cv2.imshow("img", img)
-    cv2.imwrite(f"CV/c_img_dump/{int(count/10)}.jpeg", img)
-    count += 1
 
 
 video.release()
