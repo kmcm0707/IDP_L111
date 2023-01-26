@@ -10,9 +10,6 @@ Adafruit_DCMotor *m2 = AFMS.getMotor(2); //right
 int left_line_follower = A0;
 int right_line_follower = A1;
 
-const int min_speed = 0;
-const int max_speed = 255;
-
 int linefollower_trigger = 500;
 void setup() {
   // put your setup code here, to run once:
@@ -30,13 +27,15 @@ void loop() {
 }
 
 void line_follower(){
+  m1->run(FORWARD);
+  m2->run(FORWARD);
   int error = 0; //error - turn left is +ve ,  turn right is -ve
   int last_error = 0;
   int integral = 0;
   int basespeed = 170;
-  const int k_i = 0.0008;
-  const int k_p = 0.07;
-  const int k_d = 0.6;
+  const float k_i = 0.0008;
+  const float k_p = 0.07;
+  const float k_d = 0.6;
   while(true){
     if(analogRead(left_line_follower) > linefollower_trigger &&  analogRead(right_line_follower) < linefollower_trigger) // Turn left - right wheel faster
     {
@@ -57,6 +56,23 @@ void line_follower(){
     int motorspeed = (int)(k_p*error + k_d * D + k_i * I);
     int leftspeed = basespeed - motorspeed
     int rightspeed = basespeed + motorspeed
+    
+    if(leftspeed < min_speed || leftspeed > max_speed){
+      if(leftspeed < min_speed){
+        m1->setSpeed(0);
+      } else {
+        m1->setSpeed(255);
+      }
+    } else if (rightspeed < min_speed || rightspeed > max_speed) {
+      if(rightspeed < min_speed){
+        m2->setSpeed(0);
+      } else {
+        m2->setSpeed(255);
+      }
+    } else{
+      m1->setSpeed(leftspeed);
+      m2->setSpeed(rightspeed);
+    }
     
   }
   
