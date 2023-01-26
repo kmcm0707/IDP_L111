@@ -22,8 +22,9 @@ void setup() {
 }
 
 void loop() {
+  delay(1000);
   // put your main code here, to run repeatedly:
-
+  line_follower()
 }
 
 void line_follower(){
@@ -69,13 +70,11 @@ void line_follower(){
       } else {
         m2->setSpeed(255);
       }
-    } else{
+    } else {
       m1->setSpeed(leftspeed);
       m2->setSpeed(rightspeed);
     }
     
   }
   
-}
-
-`                       
+}                    
