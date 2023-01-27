@@ -18,9 +18,19 @@ def detect_line(frame):
     upper_lim = np.array([1, 1, 1]) * 200
 
     # black & white processed img
-    line = cv2.inRange(frame, lower_lim, upper_lim)
+    mask = cv2.inRange(frame, lower_lim, upper_lim)
+    mask = cv2.bitwise_not(mask)
+    cv2.imshow("mask", mask)
 
-    cv2.imshow("Detect Line", line)
+    segmented_img = cv2.bitwise_and(frame, frame, mask=mask)
+    contours, hierarchy = cv2.findContours(
+        mask.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+    seg_output = cv2.drawContours(segmented_img, contours, -1, (0, 255, 0), 3)
+    output = cv2.drawContours(frame, contours, -1, (0, 255, 0), 3)
+
+    cv2.imshow("Detect Line", output)
+    cv2.imshow("seg img", seg_output)
     cv2.waitKey(0)  # press w key to close
 
     cv2.destroyAllWindows()
@@ -194,13 +204,13 @@ def detect_red_stream(stream):
 if __name__ == "__main__":
 
     # For lines
-    """for i in range(1, 9):
-        img = cv2.imread(f"CV/test_imgs/{i}.png")
-        detect_line(img)"""
-
-    """# For blocks
     for i in range(1, 9):
-        img = cv2.imread(f"../CV/test_imgs/{i}.png")
+        img = cv2.imread(f"test_imgs/{i}.png")
+        detect_line(img)
+
+    # For blocks
+    """for i in range(1, 9):
+        img = cv2.imread(f"test_imgs/{i}.png")
         detect_red(img)"""
 
     # this tries to apply this object detection with camera
@@ -211,10 +221,10 @@ if __name__ == "__main__":
     video.release()"""
 
     # this code works for the mjpeg stream
-    stream = cv2.VideoCapture(
+    """stream = cv2.VideoCapture(
         "http://localhost:8081/stream/video.mjpeg")
 
     detect_red_stream(stream)
-    stream.release()
+    stream.release()"""
 
     cv2.destroyAllWindows()
