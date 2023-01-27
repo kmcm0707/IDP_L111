@@ -5,7 +5,7 @@
 Adafruit_MotorShield AFMS = Adafruit_MotorShield();
 
 Adafruit_DCMotor *m1 = AFMS.getMotor(1); //left
-Adafruit_DCMotor *m2 = AFMS.getMotor(2); //right
+Adafruit_DCMotor *m2 = AFMS.getMotor(2); //right    
 
 int left_line_follower = A0;
 int right_line_follower = A1;
