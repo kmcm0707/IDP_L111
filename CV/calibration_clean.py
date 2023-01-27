@@ -1,6 +1,6 @@
+
 import cv2
 import numpy as np
-import time
 import glob
 # import main
 
@@ -8,7 +8,8 @@ CHECKERBOARD = (7, 6)
 
 objp = np.zeros((1, CHECKERBOARD[0]*CHECKERBOARD[1], 3), np.float32)
 
-objp[0, :, :2] = np.mgrid[0:CHECKERBOARD[0], 0:CHECKERBOARD[1]].T.reshape(-1, 2)
+objp[0, :, :2] = \
+    np.mgrid[0:CHECKERBOARD[0], 0:CHECKERBOARD[1]].T.reshape(-1, 2)
 
 # termination criteria
 criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
@@ -46,7 +47,7 @@ def process(img, criteria, flags=None):
     # If found, add object points, image points (after refining them)
     corners2 = None
 
-    if ret == True:
+    if ret == True:  # noqa: E712
         print("corners found")
         # good_one = fname
 
@@ -118,9 +119,10 @@ def calib_from_img_dir(dirpath, file_ext=".jpg", silent=False):
         print("frame")
         cv2.imshow("img", img)
         img_dimension = img.shape[:-1]
-        ret, each_objpoints, each_imgpoints = process(img, criteria, flags=flags)
+        ret, each_objpoints, each_imgpoints = \
+            process(img, criteria, flags=flags)
 
-        if ret == True:
+        if ret == True:  # noqa: E712
             print(fname)
 
             if silent:
@@ -139,7 +141,6 @@ def calib_from_img_dir(dirpath, file_ext=".jpg", silent=False):
 
     ret, mtx, dist, rvecs, tvecs = \
         general_calibration(objpoints, imgpoints, img_dimension)
-
 
     # if ret == True:
     print("ret true")
@@ -199,7 +200,6 @@ def undistorted_live_feed(num=2):
     h,  w = img.shape[:2]
     newcameramtx, roi = \
         cv2.getOptimalNewCameraMatrix(mtx, dist, (w, h), 0, (w, h))
-
 
     while True:
         check, img = video.read()
