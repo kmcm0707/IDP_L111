@@ -2,12 +2,13 @@ import cv2
 import numpy as np
 import time
 import glob
+# import main
 
 CHECKERBOARD = (7, 6)
 
 objp = np.zeros((1, CHECKERBOARD[0]*CHECKERBOARD[1], 3), np.float32)
 
-objp[0, :, :2] = np.mgrid[0:CHECKERBOARD[0], 0:CHECKERBOARD[1]].T.reshape(-1, 2) * 33
+objp[0, :, :2] = np.mgrid[0:CHECKERBOARD[0], 0:CHECKERBOARD[1]].T.reshape(-1, 2)
 
 # termination criteria
 criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
@@ -115,22 +116,26 @@ def calib_from_img_dir(dirpath, file_ext=".jpg", silent=False):
     for fname in images:
         img = cv2.imread(fname)
         print("frame")
+        cv2.imshow("img", img)
         img_dimension = img.shape[:-1]
-        ret, each_objpoints, each_imgpoints = process(img, criteria)
+        ret, each_objpoints, each_imgpoints = process(img, criteria, flags=flags)
 
         if ret == True:
             print(fname)
-            objpoints.append(each_objpoints)
-            imgpoints.append(each_imgpoints)
 
             if silent:
                 continue
 
             cv2.drawChessboardCorners(img, (7, 6), each_imgpoints, ret)
             cv2.imshow("image", img)
-            key = cv2.waitKey(1)
+            key = cv2.waitKey()
             if key == ord("q"):
                 return
+            elif key == ord("y"):
+                objpoints.append(each_objpoints)
+                imgpoints.append(each_imgpoints)
+            else:
+                continue
 
     ret, mtx, dist, rvecs, tvecs = \
         general_calibration(objpoints, imgpoints, img_dimension)
@@ -142,14 +147,72 @@ def calib_from_img_dir(dirpath, file_ext=".jpg", silent=False):
     newcameramtx, roi = \
         cv2.getOptimalNewCameraMatrix(mtx, dist, (w, h), 1, (w, h))
 
-    undst_img = cv2.undistort(img, mtx, dist, None, newcameramtx)
+    img = cv2.undistort(img, mtx, dist, None, newcameramtx)
+    number = 2
+    mtx.tofile(f"trial_data/mtx_{number}.dat")
+    dist.tofile(f"trial_data/dist_{number}.dat")
+    newcameramtx.tofile(f"trial_data/opt_mtx_{number}.dat")
 
-    x, y, w, h = roi
-    # undst_img = undst_img[y:y+h, x:x+w]
-    cv2.imshow("calib_img", undst_img)
+    cv2.imshow("calib_img", img)
 
     cv2.waitKey()
 
 
+def test_cal_val(number=1):
+    mtx = np.fromfile(f"trial_data/mtx_{number}.dat")
+    dist = np.fromfile(f"trial_data/dist_{number}.dat")
+    opt_mtx = np.fromfile(f"trial_data/opt_mtx_{number}.dat")
+
+    mtx = np.reshape(mtx, (3, 3))
+    dist = np.reshape(dist, (1, 5))
+    opt_mtx = np.reshape(opt_mtx, (3, 3))
+
+    img = cv2.imread("img_dump_manual_table3_2/1.jpg")
+    cv2.imshow("before", img)
+
+    h,  w = img.shape[:2]
+    newcameramtx, roi = \
+        cv2.getOptimalNewCameraMatrix(mtx, dist, (w, h), 0, (w, h))
+
+    img = cv2.undistort(img, mtx, dist, None, newcameramtx)
+
+    x, y, w, h = roi
+    img = img[y:y+h, x:x+w]
+
+    cv2.imshow("after", img)
+    cv2.waitKey()
+
+
+def undistorted_live_feed(num=2):
+    video = cv2.VideoCapture("http://localhost:8081/stream/video.mjpeg")
+
+    mtx = np.fromfile(f"trial_data/mtx_{num}.dat")
+    dist = np.fromfile(f"trial_data/dist_{num}.dat")
+    opt_mtx = np.fromfile(f"trial_data/opt_mtx_{num}.dat")
+
+    mtx = np.reshape(mtx, (3, 3))
+    dist = np.reshape(dist, (1, 5))
+    opt_mtx = np.reshape(opt_mtx, (3, 3))
+
+    check, img = video.read()
+
+    h,  w = img.shape[:2]
+    newcameramtx, roi = \
+        cv2.getOptimalNewCameraMatrix(mtx, dist, (w, h), 0, (w, h))
+
+
+    while True:
+        check, img = video.read()
+
+        img = cv2.undistort(img, mtx, dist, None, newcameramtx)
+        # img = main.detect_red(img)
+        cv2.imshow("feed", img)
+
+        key = cv2.waitKey(1)
+        if key == ord("q"):
+            return
+
+
 if __name__ == "__main__":
-    calib_from_img_dir("img_dump_manual_table3")
+    # calib_from_img_dir("img_dump_manual_table3_2")
+    undistorted_live_feed()
