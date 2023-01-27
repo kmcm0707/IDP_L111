@@ -62,12 +62,15 @@ while True:
     key = cv2.waitKey(1)
     if key == ord("q"):
         break
-    if key == ord("w"):
-        cv2.imwrite(f"img_dump_manual_table3/{count}.jpg", img)
-        count += 1
+    # if key == ord("w"):
+    if (count % 20) == 0:
+        print("captured")
+        cv2.imwrite(f"img_dump_manual_table3_2/{int(count/20)}.jpg", img)
+    
+    count += 1
 
     cv2.imshow("img", img)
-
+    
 
 video.release()
 

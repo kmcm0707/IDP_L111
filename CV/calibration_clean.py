@@ -7,7 +7,7 @@ CHECKERBOARD = (7, 6)
 
 objp = np.zeros((1, CHECKERBOARD[0]*CHECKERBOARD[1], 3), np.float32)
 
-objp[0, :, :2] = np.mgrid[0:CHECKERBOARD[0], 0:CHECKERBOARD[1]].T.reshape(-1, 2) * 33
+objp[0, :, :2] = np.mgrid[0:CHECKERBOARD[0], 0:CHECKERBOARD[1]].T.reshape(-1, 2)
 
 # termination criteria
 criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
@@ -115,13 +115,12 @@ def calib_from_img_dir(dirpath, file_ext=".jpg", silent=False):
     for fname in images:
         img = cv2.imread(fname)
         print("frame")
+        cv2.imshow("img", img)
         img_dimension = img.shape[:-1]
         ret, each_objpoints, each_imgpoints = process(img, criteria)
 
         if ret == True:
             print(fname)
-            objpoints.append(each_objpoints)
-            imgpoints.append(each_imgpoints)
 
             if silent:
                 continue
@@ -131,6 +130,11 @@ def calib_from_img_dir(dirpath, file_ext=".jpg", silent=False):
             key = cv2.waitKey(1)
             if key == ord("q"):
                 return
+            elif key == ord("y"):
+                objpoints.append(each_objpoints)
+                imgpoints.append(each_imgpoints)
+            else:
+                continue
 
     ret, mtx, dist, rvecs, tvecs = \
         general_calibration(objpoints, imgpoints, img_dimension)
@@ -142,14 +146,16 @@ def calib_from_img_dir(dirpath, file_ext=".jpg", silent=False):
     newcameramtx, roi = \
         cv2.getOptimalNewCameraMatrix(mtx, dist, (w, h), 1, (w, h))
 
-    undst_img = cv2.undistort(img, mtx, dist, None, newcameramtx)
+    img = cv2.undistort(img, mtx, dist, None, newcameramtx)
+    number = 1
+    mtx.tofile(f"tiral_data/mtx_{number}.dat")
+    dist.tofile(f"tiral_data/dist_{number}.dat")
+    newcameramtx.tofile(f"trial_data/opt_mtx_{number}.dat")
 
-    x, y, w, h = roi
-    # undst_img = undst_img[y:y+h, x:x+w]
-    cv2.imshow("calib_img", undst_img)
+    cv2.imshow("calib_img", img)
 
     cv2.waitKey()
 
 
 if __name__ == "__main__":
-    calib_from_img_dir("img_dump_manual_table3")
+    calib_from_img_dir("img_dump_manual_table3_2")
