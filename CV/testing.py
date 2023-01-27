@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 import time
+
 """
 frame = cv2.imread("../CV/test_imgs/4.png")
 
@@ -41,8 +42,7 @@ def process(img):
         # good_one = fname
 
         # objpoints.append(objp)
-        corners2 = cv2.cornerSubPix(
-            gray, corners, (11, 11), (-1, -1), criteria)
+        corners2 = cv2.cornerSubPix(gray, corners, (11, 11), (-1, -1), criteria)
 
         # imgpoints.append(corners2)
         # Draw and display the corners
@@ -66,11 +66,11 @@ while True:
     if (count % 20) == 0:
         print("captured")
         cv2.imwrite(f"img_dump_manual_table3_2/{int(count/20)}.jpg", img)
-    
+
     count += 1
 
     cv2.imshow("img", img)
-    
+
 
 video.release()
 

@@ -24,7 +24,8 @@ def detect_line(frame):
 
     segmented_img = cv2.bitwise_and(frame, frame, mask=mask)
     contours, hierarchy = cv2.findContours(
-        mask.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        mask.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
+    )
 
     seg_output = cv2.drawContours(segmented_img, contours, -1, (0, 255, 0), 3)
     output = cv2.drawContours(frame, contours, -1, (0, 255, 0), 3)
@@ -63,24 +64,31 @@ def detect_red(frame):
 
     # segmented_img = cv2.bitwise_and(frame, frame, mask=mask)
     contours, hierarchy = cv2.findContours(
-        mask.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        mask.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
+    )
     # seg_output = cv2.drawContours(segmented_img, contours, -1, (0, 255, 0),3)
     # output = cv2.drawContours(frame, contours, -1, (0, 255, 0), 3)
     centres = []
     for cont in contours:
         """if cv2.contourArea(cont) <= 20:
-            continue"""
+        continue"""
         x, y, w, h = cv2.boundingRect(cont)
 
         centres.append((x, y, w, h))
 
     dim = frame.shape
-    half = (dim[1]*0.5)
+    half = dim[1] * 0.5
     for x, y, w, h in centres:
         if (x < half) and (x > 180):
-            cv2.rectangle(frame, (x, y), (x+w, y+h), (255, 0, 0))
-            cv2.putText(frame, f"{x}, {y}, {cv2.contourArea(cont)}", (x, y),
-                        font, 0.5, (255, 0, 0))
+            cv2.rectangle(frame, (x, y), (x + w, y + h), (255, 0, 0))
+            cv2.putText(
+                frame,
+                f"{x}, {y}, {cv2.contourArea(cont)}",
+                (x, y),
+                font,
+                0.5,
+                (255, 0, 0),
+            )
 
             # print(f"cubes at : {x, y}")
 
@@ -96,7 +104,7 @@ def detect_red(frame):
     # cv2.imshow('res', res)
     # cv2.waitKey(1)
 
-    #cv2.destroyAllWindows()
+    # cv2.destroyAllWindows()
 
 
 def detect_red_video(video):
@@ -122,7 +130,8 @@ def detect_red_video(video):
 
         # finding contours
         contours, hierarchy = cv2.findContours(
-            mask.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            mask.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
+        )
 
         # drawing rectangles
         centres = []
@@ -134,18 +143,18 @@ def detect_red_video(video):
             centres.append((x, y, w, h))
 
         dim = frame.shape
-        half = (dim[1]*0.5)
+        half = dim[1] * 0.5
         for x, y, w, h in centres:
             if (x < half) and (x > 180):
-                cv2.rectangle(frame, (x, y), (x+w, y+h), (255, 0, 0))
+                cv2.rectangle(frame, (x, y), (x + w, y + h), (255, 0, 0))
 
         # showing the feed with rectangles
-        cv2.imshow('frame', frame)
+        cv2.imshow("frame", frame)
 
         # for stopping the window wont run without it
         # see file docstring for detail
         key = cv2.waitKey(2)
-        if key == ord('q'):
+        if key == ord("q"):
             return
 
 
@@ -174,7 +183,8 @@ def detect_red_stream(stream):
 
         # finding contours
         contours, hierarchy = cv2.findContours(
-            mask.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            mask.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
+        )
 
         # drawing rectangle where the object was located
         centres = []
@@ -186,18 +196,18 @@ def detect_red_stream(stream):
             centres.append((x, y, w, h))
 
         dim = frame.shape
-        half = (dim[1]*0.5)
+        half = dim[1] * 0.5
         for x, y, w, h in centres:
             if (x < half) and (x > 180):
-                cv2.rectangle(frame, (x, y), (x+w, y+h), (255, 0, 0))
+                cv2.rectangle(frame, (x, y), (x + w, y + h), (255, 0, 0))
 
         # showing the feed with the rectangle
-        cv2.imshow('frame', frame)
+        cv2.imshow("frame", frame)
 
         # for stopping the window (wont run without it)
         # see file docstring for detail
         key = cv2.waitKey(2)
-        if key == ord('q'):
+        if key == ord("q"):
             return
 
 
