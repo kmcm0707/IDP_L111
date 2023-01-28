@@ -249,8 +249,14 @@ if __name__ == "__main__":
 
     while True:
         ret, frame = video.read()
-        output = Detector.detectMarkers(frame)
-        print(output)
+        corners, ids, rejected = Detector.detectMarkers(frame)
+        print(corners)
+        if len(corners) > 0:
+            print(corners[0].shape)
+            x = corners[0][0, 0].astype("int32")
+            y = corners[0][0, 2].astype("int32")
+
+            cv2.rectangle(frame, x, y, (255, 0, 0))
         cv2.imshow("feed", frame)
         key = cv2.waitKey(1)
         if key == ord("q"):
