@@ -17,10 +17,14 @@ objp[0, :, :2] = (
     np.mgrid[0 : CHECKERBOARD[0], 0 : CHECKERBOARD[1]].T.reshape(-1, 2) * 33
 )
 _img_shape = None
-objpoints = []  # 3d point in real world space
-imgpoints = (
-    []
-)  # 2d points in image plane.images = glob.glob('*.jpg')for fname in images:
+
+# 3d point in real world space
+objpoints = [] 
+
+# 2d points in image plane.
+imgpoints = []  
+
+# images = glob.glob('*.jpg')for fname in images:
 
 # video = cv2.VideoCapture("http://localhost:8081/stream/video.mjpeg")
 # video = cv2.VideoCapture(0)

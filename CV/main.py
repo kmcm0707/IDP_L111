@@ -211,12 +211,17 @@ def detect_red_stream(stream):
             return
 
 
+def detect_apriltag(img):
+    corners, ids, rejectedImgPoints = cv2.aruco.ArucoDetector.detectMarkers(img)
+    print(corners, ids, rejectedImgPoints)
+
+
 if __name__ == "__main__":
 
     # For lines
-    for i in range(1, 9):
-        img = cv2.imread(f"test_imgs/{i}.png")
-        detect_line(img)
+    """for i in range(1, 9):
+    img = cv2.imread(f"test_imgs/{i}.png")
+    detect_line(img)"""
 
     # For blocks
     """for i in range(1, 9):
@@ -236,5 +241,19 @@ if __name__ == "__main__":
 
     detect_red_stream(stream)
     stream.release()"""
+
+    video = cv2.VideoCapture(0)
+    Detector = cv2.aruco.ArucoDetector(
+        cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_APRILTAG_36h11)
+    )
+
+    while True:
+        ret, frame = video.read()
+        output = Detector.detectMarkers(frame)
+        print(output)
+        cv2.imshow("feed", frame)
+        key = cv2.waitKey(1)
+        if key == ord("q"):
+            break
 
     cv2.destroyAllWindows()
