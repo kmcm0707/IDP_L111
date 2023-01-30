@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 import glob
+import shutil
 
 # import main
 
@@ -156,7 +157,7 @@ def calib_from_img_dir(dirpath, file_ext=".jpg", silent=False):
     newcameramtx, roi = cv2.getOptimalNewCameraMatrix(mtx, dist, (w, h), 1, (w, h))
 
     img = cv2.undistort(img, mtx, dist, None, newcameramtx)
-    number = 2
+    number = 4
     mtx.tofile(f"trial_data/mtx_{number}.dat")
     dist.tofile(f"trial_data/dist_{number}.dat")
     newcameramtx.tofile(f"trial_data/opt_mtx_{number}.dat")
@@ -164,6 +165,32 @@ def calib_from_img_dir(dirpath, file_ext=".jpg", silent=False):
     cv2.imshow("calib_img", img)
 
     cv2.waitKey()
+
+
+def sort_img(path_to_imgs, file_ext=".jpg", silent=False):
+    images = glob.glob(f"{path_to_imgs}/*{file_ext}")
+    for fname in images:
+        img = cv2.imread(fname)
+        print("frame")
+        cv2.imshow("img", img)
+        img_dimension = img.shape[:-1]
+        ret, each_objpoints, each_imgpoints = process(img, criteria, flags=flags)
+
+        if ret == True:  # noqa: E712
+            print(fname)
+
+            if silent:
+                continue
+
+            cv2.drawChessboardCorners(img, (7, 6), each_imgpoints, ret)
+            cv2.imshow("image", img)
+            key = cv2.waitKey()
+            if key == ord("q"):
+                return
+            elif key == ord("y"):
+                shutil.copy(fname, "successful_imgs")
+            else:
+                continue
 
 
 def test_cal_val(number=1):
@@ -214,6 +241,10 @@ def undistorted_live_feed(num=2):
 
 
 if __name__ == "__main__":
-    # calib_from_img_dir("img_dump_manual_table3_2")
+    # calib_from_img_dir("successful_imgs")
     # undistorted_live_feed()
+    test_cal_val(3)
     test_cal_val(2)
+    test_cal_val(1)
+    test_cal_val(4)
+    # sort_img("img_dump_manual_table3_2")

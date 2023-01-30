@@ -306,11 +306,11 @@ if __name__ == "__main__":
 
     # perspective transformation on stream
     video = cv2.VideoCapture("http://localhost:8081/stream/video.mjpeg")
-    time.sleep(1)
+    # time.sleep(1)
     ret, frame = video.read()
     frame = cal.undistorted_live_feed(frame)
     dim = (810, 810)
-    M = perspective_transoformation(frame, dim)
+    M = perspective_transoformation(frame.copy(), dim)
 
     while True:
         ret, frame = video.read()
