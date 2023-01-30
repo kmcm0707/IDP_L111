@@ -193,7 +193,9 @@ def test_cal_val(number=1):
 def undistorted_live_feed(num=2):
     video = cv2.VideoCapture("http://localhost:8081/stream/video.mjpeg")
 
-    check, img = video.read()
+    ret = False
+    while not ret:
+        ret, img = video.read()
 
     h, w = img.shape[:2]
     newcameramtx, roi = cv2.getOptimalNewCameraMatrix(mtx, dist, (w, h), 1, (w, h))
