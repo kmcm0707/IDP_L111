@@ -1,5 +1,7 @@
 import cv2
 import numpy as np
+import calibration_clean as cal
+import time
 
 """Main code for computer vision
 
@@ -79,7 +81,7 @@ def detect_red(frame):
     dim = frame.shape
     half = dim[1] * 0.5
     for x, y, w, h in centres:
-        if (x < half) and (x > 180):
+        if True:  # (x < half) and (x > 180):
             cv2.rectangle(frame, (x, y), (x + w, y + h), (255, 0, 0))
             cv2.putText(
                 frame,
@@ -165,7 +167,8 @@ def detect_red_stream(stream):
         check, frame = stream.read()
 
         if not check:
-            return
+            continue
+        frame = cal.undistorted_live_feed(frame)
         # converting from RGB to HVS
         hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 
@@ -198,8 +201,8 @@ def detect_red_stream(stream):
         dim = frame.shape
         half = dim[1] * 0.5
         for x, y, w, h in centres:
-            if (x < half) and (x > 180):
-                cv2.rectangle(frame, (x, y), (x + w, y + h), (255, 0, 0))
+            # if (x < half) and (x > 180):
+            cv2.rectangle(frame, (x, y), (x + w, y + h), (255, 0, 0))
 
         # showing the feed with the rectangle
         cv2.imshow("frame", frame)
@@ -214,6 +217,43 @@ def detect_red_stream(stream):
 def detect_apriltag(img):
     corners, ids, rejectedImgPoints = cv2.aruco.ArucoDetector.detectMarkers(img)
     print(corners, ids, rejectedImgPoints)
+
+
+def detect_apriltag_stream(frame):
+    frame = cal.undistorted_live_feed(frame)
+    # frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    corners, ids, rejected = Detector.detectMarkers(frame)
+    print(corners)
+    if len(corners) > 0:
+        print(corners[0].shape)
+        x = corners[0][0, 0].astype("int32")
+        y = corners[0][0, 2].astype("int32")
+
+        cv2.rectangle(frame, x, y, (255, 0, 0))
+
+    return frame
+
+
+def perspective_transoformation(img, dim):
+    points = []
+
+    def click_envent(event, x, y, flags, params):
+        if event == cv2.EVENT_LBUTTONDOWN:
+            print(x, y)
+            points.append((x, y))
+
+        if len(points) >= 4:
+            cv2.destroyAllWindows()
+            print(points)
+
+    cv2.imshow("img", img)
+    cv2.setMouseCallback("img", click_envent)
+    key = cv2.waitKey()
+    points = np.float32(points)
+    new_points = np.float32([(0, 0), (0, dim[1]), (dim[0], 0), dim])
+
+    M = cv2.getPerspectiveTransform(points, new_points)
+    return M
 
 
 if __name__ == "__main__":
@@ -236,19 +276,21 @@ if __name__ == "__main__":
     video.release()"""
 
     # this code works for the mjpeg stream
-    """stream = cv2.VideoCapture(
-        "http://localhost:8081/stream/video.mjpeg")
+    """stream = cv2.VideoCapture("http://localhost:8081/stream/video.mjpeg")
 
     detect_red_stream(stream)
     stream.release()"""
 
-    video = cv2.VideoCapture(0)
+    # this does apriltag detection on stream
+    """video = cv2.VideoCapture("http://localhost:8081/stream/video.mjpeg")
     Detector = cv2.aruco.ArucoDetector(
         cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_APRILTAG_36h11)
     )
 
     while True:
         ret, frame = video.read()
+        frame = cal.undistorted_live_feed(frame)
+        # frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         corners, ids, rejected = Detector.detectMarkers(frame)
         print(corners)
         if len(corners) > 0:
@@ -258,6 +300,26 @@ if __name__ == "__main__":
 
             cv2.rectangle(frame, x, y, (255, 0, 0))
         cv2.imshow("feed", frame)
+        key = cv2.waitKey(1)
+        if key == ord("q"):
+            break"""
+
+    # perspective transformation on stream
+    video = cv2.VideoCapture("http://localhost:8081/stream/video.mjpeg")
+    time.sleep(1)
+    ret, frame = video.read()
+    frame = cal.undistorted_live_feed(frame)
+    dim = (810, 810)
+    M = perspective_transoformation(frame, dim)
+
+    while True:
+        ret, frame = video.read()
+        if not ret:
+            continue
+        frame = cal.undistorted_live_feed(frame)
+        frame = cv2.warpPerspective(frame, M, dim)
+        frame = detect_red(frame)
+        cv2.imshow("frame", frame)
         key = cv2.waitKey(1)
         if key == ord("q"):
             break

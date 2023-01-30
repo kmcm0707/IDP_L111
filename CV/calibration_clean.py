@@ -25,6 +25,16 @@ fish_eyed_flags = (
     cv2.fisheye.CALIB_RECOMPUTE_EXTRINSIC + cv2.fisheye.CALIB_FIX_SKEW
 )  # + cv2.fisheye.CALIB_CHECK_COND
 
+num = 2
+
+mtx = np.fromfile(f"trial_data/mtx_{num}.dat")
+dist = np.fromfile(f"trial_data/dist_{num}.dat")
+opt_mtx = np.fromfile(f"trial_data/opt_mtx_{num}.dat")
+
+mtx = np.reshape(mtx, (3, 3))
+dist = np.reshape(dist, (1, 5))
+opt_mtx = np.reshape(opt_mtx, (3, 3))
+
 
 imgpoints = []
 objpoints = []
@@ -169,12 +179,12 @@ def test_cal_val(number=1):
     cv2.imshow("before", img)
 
     h, w = img.shape[:2]
-    newcameramtx, roi = cv2.getOptimalNewCameraMatrix(mtx, dist, (w, h), 0, (w, h))
+    newcameramtx, roi = cv2.getOptimalNewCameraMatrix(mtx, dist, (w, h), 1, (w, h))
 
     img = cv2.undistort(img, mtx, dist, None, newcameramtx)
 
     x, y, w, h = roi
-    img = img[y : y + h, x : x + w]
+    # img = img[y : y + h, x : x + w]
 
     cv2.imshow("after", img)
     cv2.waitKey()
@@ -183,31 +193,25 @@ def test_cal_val(number=1):
 def undistorted_live_feed(num=2):
     video = cv2.VideoCapture("http://localhost:8081/stream/video.mjpeg")
 
-    mtx = np.fromfile(f"trial_data/mtx_{num}.dat")
-    dist = np.fromfile(f"trial_data/dist_{num}.dat")
-    opt_mtx = np.fromfile(f"trial_data/opt_mtx_{num}.dat")
-
-    mtx = np.reshape(mtx, (3, 3))
-    dist = np.reshape(dist, (1, 5))
-    opt_mtx = np.reshape(opt_mtx, (3, 3))
-
     check, img = video.read()
 
     h, w = img.shape[:2]
-    newcameramtx, roi = cv2.getOptimalNewCameraMatrix(mtx, dist, (w, h), 0, (w, h))
+    newcameramtx, roi = cv2.getOptimalNewCameraMatrix(mtx, dist, (w, h), 1, (w, h))
 
     while True:
         check, img = video.read()
 
         img = cv2.undistort(img, mtx, dist, None, newcameramtx)
         # img = main.detect_red(img)
-        cv2.imshow("feed", img)
+        # cv2.imshow("feed", img)
+        return img
 
-        key = cv2.waitKey(1)
+        """key = cv2.waitKey(1)
         if key == ord("q"):
-            return
+            return"""
 
 
 if __name__ == "__main__":
     # calib_from_img_dir("img_dump_manual_table3_2")
-    undistorted_live_feed()
+    # undistorted_live_feed()
+    test_cal_val(2)
