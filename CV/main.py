@@ -50,6 +50,28 @@ class VideoGet:
     def stop(self):
         self.stopped = True
 
+class VideoShow:
+    """
+    Class that continuously shows a frame using a dedicated thread.
+    """
+
+    def __init__(self, frame=None):
+        self.frame = frame
+        self.stopped = False
+    
+    def start(self):
+        Thread(target=self.show, args=()).start()
+        return self
+
+    def show(self):
+        while not self.stopped:
+            cv2.imshow("Video", self.frame)
+            if cv2.waitKey(1) == ord("q"):
+                self.stopped = True
+
+    def stop(self):
+        self.stopped = True
+
 def detect_line(frame):
     "detects / highlights line in a an image"
 
@@ -404,7 +426,7 @@ if __name__ == "__main__":
 
     #video = cv2.VideoCapture("http://localhost:8081/stream/video.mjpeg")
     video_getter = VideoGet("http://localhost:8081/stream/video.mjpeg").start()
-    
+    video_shower = VideoShow(video_getter.frame).start()
     #option = pupil_apriltags.DetectorOptions(families="tag36h11")
     detector = pupil_apriltags.Detector(families="tag36h11")
     count = 0
@@ -423,9 +445,9 @@ if __name__ == "__main__":
         frame = cv2.warpPerspective(frame, M, dim)
         result = detector.detect(frame)
         print(result)
-        cv2.imshow("frame", frame)
-        key = cv2.waitKey(1)
-        if key == ord("q"):
+        video_shower.frame = frame
+        if video_getter.stopped or video_shower.stopped:
+            video_shower.stop()
             video_getter.stop()
             break
 
