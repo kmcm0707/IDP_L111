@@ -26,6 +26,7 @@ fish_eyed_flags = (
     cv2.fisheye.CALIB_RECOMPUTE_EXTRINSIC + cv2.fisheye.CALIB_FIX_SKEW
 )  # + cv2.fisheye.CALIB_CHECK_COND
 
+# the best one is 2
 num = 2
 
 mtx = np.fromfile(f"trial_data/mtx_{num}.dat")
@@ -36,12 +37,16 @@ mtx = np.reshape(mtx, (3, 3))
 dist = np.reshape(dist, (1, 5))
 opt_mtx = np.reshape(opt_mtx, (3, 3))
 
-
+# coordinate on the image
 imgpoints = []
+
+# coordinate on the 3d space
 objpoints = []
 
 
 def process(img, criteria, flags=None):
+    """finds corners of chessboard in image, returns the object points and
+    images points along with if the corners were found or"""
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
     """mask = cv2.inRange(gray, 0, 200)
@@ -69,6 +74,7 @@ def process(img, criteria, flags=None):
 
 
 def fish_eye_calibration(objpoints, imgpoints, shape):
+    "not curretly in use, fixes distortion for fisheyed lense"
     N_OK = len(objpoints)
     mtx = np.zeros((3, 3))
     dist = np.zeros((4, 1))
@@ -101,6 +107,8 @@ def fish_eye_calibration(objpoints, imgpoints, shape):
 
 
 def general_calibration(objpoints, imgpoints, shape):
+    """returns calibration parameters with given position of points on image
+    and in 3d space, can be used for any type of distortion"""
     ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(
         objpoints, imgpoints, shape[::-1], None, None
     )
@@ -119,6 +127,9 @@ def general_calibration(objpoints, imgpoints, shape):
 
 
 def calib_from_img_dir(dirpath, file_ext=".jpg", silent=False):
+    """calculates calibration parametres (mtr, dist, rvecs, tvecs, optimised_mtx)
+    from a directory of images while sorting good ones manually
+    """
     objpoints = []
     imgpoints = []
 
@@ -168,6 +179,7 @@ def calib_from_img_dir(dirpath, file_ext=".jpg", silent=False):
 
 
 def sort_img(path_to_imgs, file_ext=".jpg", silent=False):
+    "for sorting good images and bad ones from calibration images"
     images = glob.glob(f"{path_to_imgs}/*{file_ext}")
     for fname in images:
         img = cv2.imread(fname)
@@ -194,6 +206,7 @@ def sort_img(path_to_imgs, file_ext=".jpg", silent=False):
 
 
 def test_cal_val(number=1):
+    "function for testing privious calibration values"
     mtx = np.fromfile(f"trial_data/mtx_{number}.dat")
     dist = np.fromfile(f"trial_data/dist_{number}.dat")
     opt_mtx = np.fromfile(f"trial_data/opt_mtx_{number}.dat")
@@ -218,6 +231,7 @@ def test_cal_val(number=1):
 
 
 def undistorted_live_feed(num=2):
+    "goves live feed of undistorted image"
     video = cv2.VideoCapture("http://localhost:8081/stream/video.mjpeg")
 
     ret = False
@@ -232,19 +246,38 @@ def undistorted_live_feed(num=2):
 
         img = cv2.undistort(img, mtx, dist, None, newcameramtx)
         # img = main.detect_red(img)
-        # cv2.imshow("feed", img)
-        return img
+        cv2.imshow("feed", img)
 
-        """key = cv2.waitKey(1)
+        key = cv2.waitKey(1)
         if key == ord("q"):
-            return"""
+            return
+
+
+def undistort_frame(img, mtx=mtx, dist=dist, new_mtx=opt_mtx):
+    "function to undistort a frame/image"
+    h, w = img.shape[:2]
+    # newcameramtx, roi = cv2.getOptimalNewCameraMatrix(mtx, dist, (w, h), 1, (w, h))
+
+    img = cv2.undistort(img, mtx, dist, None, new_mtx)
+    return img
+
+
+def load_vals(num=2):
+    mtx = np.fromfile(f"trial_data/mtx_{num}.dat")
+    dist = np.fromfile(f"trial_data/dist_{num}.dat")
+    opt_mtx = np.fromfile(f"trial_data/opt_mtx_{num}.dat")
+
+    mtx = np.reshape(mtx, (3, 3))
+    dist = np.reshape(dist, (1, 5))
+    opt_mtx = np.reshape(opt_mtx, (3, 3))
+
+    return mtx, dist, opt_mtx
 
 
 if __name__ == "__main__":
     # calib_from_img_dir("successful_imgs")
     # undistorted_live_feed()
-    test_cal_val(3)
+    # test_cal_val(3)
     test_cal_val(2)
-    test_cal_val(1)
-    test_cal_val(4)
+
     # sort_img("img_dump_manual_table3_2")

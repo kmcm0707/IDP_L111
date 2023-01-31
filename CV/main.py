@@ -1,7 +1,21 @@
+#!../env/bin/python
+# -*- coding: utf-8 -*-
+# python 3.9.16
+"""Comaints code for detection for cube, line or ar tag
+
+
+"""
+
 import cv2
 import numpy as np
 import calibration_clean as cal
 import time
+
+try:
+    import apriltag
+except ImportError:
+    print("Apriltag not installed")
+    print("not required so ignore this error")
 
 """Main code for computer vision
 
@@ -11,6 +25,8 @@ to work. if that is outside of the function it wont work.
 
 
 def detect_line(frame):
+    "detects / highlights line in a an image"
+
     # print(repr(frame))
     "colour_img = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)"
 
@@ -40,7 +56,7 @@ def detect_line(frame):
 
 
 def detect_red(frame):
-    # detecting red cube in video
+    "for detecting red cube in an image"
 
     # TODO: do the processing in particular section of the image
 
@@ -110,7 +126,7 @@ def detect_red(frame):
 
 
 def detect_red_video(video):
-    # detecting red cube in video
+    "detecting red cube in video and draws rectangle around it"
 
     while True:
         check, frame = video.read()
@@ -161,14 +177,14 @@ def detect_red_video(video):
 
 
 def detect_red_stream(stream):
-    # detects red cubes in stream (*untested)
+    "detects red cubes in stream without fixing distortion (for now)"
 
     while stream.isOpened():
         check, frame = stream.read()
 
         if not check:
             continue
-        frame = cal.undistorted_live_feed(frame)
+        # frame = cal.undistorted_live_feed(frame)
         # converting from RGB to HVS
         hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 
@@ -215,13 +231,17 @@ def detect_red_stream(stream):
 
 
 def detect_apriltag(img):
+    """detects apriltag in an image using OpenCV implementation of apriltag
+    detection algorimths"""
     corners, ids, rejectedImgPoints = cv2.aruco.ArucoDetector.detectMarkers(img)
     print(corners, ids, rejectedImgPoints)
 
 
-def detect_apriltag_stream(frame):
+def detect_apriltag_stream_opencv(frame):
+    """detects apriltag in a stream using OpenCV implementation of apriltag
+    detection algorimth"""
     frame = cal.undistorted_live_feed(frame)
-    # frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     corners, ids, rejected = Detector.detectMarkers(frame)
     print(corners)
     if len(corners) > 0:
@@ -234,7 +254,30 @@ def detect_apriltag_stream(frame):
     return frame
 
 
+def detect_apriltag_stream_apriltag(video):
+    """detects apriltag in a stream using apriltag implementation of apriltag
+    detection algorimth"""
+    option = apriltag.DetectorOptions(families="tag36h11")
+    detector = apriltag.Detector(option)
+    while True:
+        ret, frame = video.read()
+        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        if not ret:
+            print("video not ret")
+            return
+
+        result = detector.detect(frame)
+        print(result)
+
+        cv2.imshow("frame", frame)
+        key = cv2.waitKey(1)
+        if key == ord("q"):
+            return
+
+
 def perspective_transoformation(img, dim):
+    """function for manual perspective transformation of an image
+    returns the transformation matrix"""
     points = []
 
     def click_envent(event, x, y, flags, params):
@@ -266,7 +309,13 @@ if __name__ == "__main__":
     # For blocks
     """for i in range(1, 9):
         img = cv2.imread(f"test_imgs/{i}.png")
-        detect_red(img)"""
+        img = cal.undistort_frame(img)
+        dim = (810, 810)
+        M = perspective_transoformation(img, dim)
+        img = cv2.warpPerspective(img, M, dim)
+        img = detect_red(img)
+        cv2.imshow("img", img)
+        cv2.waitKey(0)"""
 
     # this tries to apply this object detection with camera
     """video = cv2.VideoCapture(0)
@@ -282,15 +331,16 @@ if __name__ == "__main__":
     stream.release()"""
 
     # this does apriltag detection on stream
-    """video = cv2.VideoCapture("http://localhost:8081/stream/video.mjpeg")
+    # video = cv2.VideoCapture("http://localhost:8081/stream/video.mjpeg")
+    """video = cv2.VideoCapture(0)
     Detector = cv2.aruco.ArucoDetector(
         cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_APRILTAG_36h11)
     )
 
     while True:
         ret, frame = video.read()
-        frame = cal.undistorted_live_feed(frame)
-        # frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        # frame = cal.undistorted_live_feed(frame)
+        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         corners, ids, rejected = Detector.detectMarkers(frame)
         print(corners)
         if len(corners) > 0:
@@ -304,21 +354,33 @@ if __name__ == "__main__":
         if key == ord("q"):
             break"""
 
+    # detecting apriltag using apriltag liberary
+    """video = cv2.VideoCapture(0)
+    detect_apriltag_2(video)
+    video.release()"""
+
     # perspective transformation on stream
     video = cv2.VideoCapture("http://localhost:8081/stream/video.mjpeg")
-    # time.sleep(1)
+    time.sleep(2)
     ret, frame = video.read()
-    frame = cal.undistorted_live_feed(frame)
+
+    h, w = frame.shape[:2]
+    mtx, dist, newcameramtx = cal.load_vals(2)
+    # newcameramtx, roi = cv2.getOptimalNewCameraMatrix(mtx, dist, (w, h), 1, (w, h))
+
+    frame = cv2.undistort(frame, mtx, dist, None, newcameramtx)
+
     dim = (810, 810)
-    M = perspective_transoformation(frame.copy(), dim)
+    print("click on the corners of the table")
+    M = perspective_transoformation(frame, dim)
 
     while True:
         ret, frame = video.read()
         if not ret:
             continue
-        frame = cal.undistorted_live_feed(frame)
+        frame = cv2.undistort(frame, mtx, dist, None, newcameramtx)
         frame = cv2.warpPerspective(frame, M, dim)
-        frame = detect_red(frame)
+        # frame = detect_red(frame)
         cv2.imshow("frame", frame)
         key = cv2.waitKey(1)
         if key == ord("q"):
