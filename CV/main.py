@@ -11,6 +11,8 @@ import numpy as np
 import calibration_clean as cal
 import time
 import numba
+import pupil_apriltags
+from threading import Thread
 
 try:
     import apriltag
@@ -23,7 +25,30 @@ except ImportError:
 there as 3 different detect red function because open cv requires cv2.waitKey()
 to work. if that is outside of the function it wont work.
 """
+class VideoGet:
+    """
+    Class that continuously gets frames from a VideoCapture object
+    with a dedicated thread.
+    """
 
+    def __init__(self, src=0):
+        self.stream = cv2.VideoCapture(src)
+        (self.grabbed, self.frame) = self.stream.read()
+        self.stopped = False
+
+    def start(self):    
+        Thread(target=self.get, args=()).start()
+        return self
+
+    def get(self):
+        while not self.stopped:
+            if not self.grabbed:
+                self.stop()
+            else:
+                (self.grabbed, self.frame) = self.stream.read()
+
+    def stop(self):
+        self.stopped = True
 
 def detect_line(frame):
     "detects / highlights line in a an image"
@@ -377,18 +402,19 @@ if __name__ == "__main__":
     M = perspective_transoformation(frame.copy(), dim)
     video.release()
 
-    video = cv2.VideoCapture("http://localhost:8081/stream/video.mjpeg")
-
-    option = apriltag.DetectorOptions(families="tag36h11")
-    detector = apriltag.Detector(option)
+    #video = cv2.VideoCapture("http://localhost:8081/stream/video.mjpeg")
+    video_getter = VideoGet("http://localhost:8081/stream/video.mjpeg").start()
+    
+    #option = pupil_apriltags.DetectorOptions(families="tag36h11")
+    detector = pupil_apriltags.Detector(families="tag36h11")
     count = 0
     while True:
-        if count % 3 != 0:
-            ret, frame = video.read()
-            count += 1
-            continue
+        #if count % 3 != 0:
+         #   ret, frame = video.read()
+          #  count += 1
+           # continue
 
-        ret, frame = video.read()
+        frame = video_getter.frame
         # frame = detect_red(frame)
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         if not ret:
@@ -400,6 +426,7 @@ if __name__ == "__main__":
         cv2.imshow("frame", frame)
         key = cv2.waitKey(1)
         if key == ord("q"):
+            video_getter.stop()
             break
 
     cv2.destroyAllWindows()

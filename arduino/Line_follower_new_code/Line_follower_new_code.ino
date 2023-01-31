@@ -11,11 +11,11 @@ int left_line_follower = A0;
 int right_line_follower = A1;
 
 int linefollower_trigger = 500;
+int status_check = 0; //set to 1 after blocks picked up
 void setup() {
   // put your setup code here, to run once:
 
    if (!AFMS.begin()) {
-    Serial.println("Could not find Motor Shield. Check wiring.");
     while (1);
   }
   
@@ -46,14 +46,19 @@ void line_follower(){
     {
       error = -5;
     }
-    if(analogRead(left_line_follower) < linefollower_trigger &&  analogRead(right_line_follower) < linefollower_trigger) // turn right - left wheel faster
+    if(analogRead(left_line_follower) < linefollower_trigger &&  analogRead(right_line_follower) < linefollower_trigger) // ultrasound
     {
-      error = last_error;
-      if(error < 0){
-        error = -10;
+      if(status_check == 1) {
+        
       }
-      if (error > 0){
-        error = 10;
+      else {
+        error = last_error;
+        if(error < 0){
+          error = -10;
+        }
+        if (error > 0){
+          error = 10;
+        }
       }
     }
     if(analogRead(left_line_follower) > linefollower_trigger &&  analogRead(right_line_follower) > linefollower_trigger) // turn right - left wheel faster

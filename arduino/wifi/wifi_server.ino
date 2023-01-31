@@ -26,7 +26,7 @@ char pass[] = SEC_PW;    // your network password (use for WPA, or use as key fo
 int keyIndex = 0;                // your network key index number (needed only for WEP)
 
 int led =  LED_BUILTIN;
-int status = WL_IDLE_STATUS;
+int WL_idle_status = WL_IDLE_STATUS;
 WiFiServer server(80);
 
 void setup() {
@@ -35,31 +35,24 @@ void setup() {
   while (!Serial) {
     ; // wait for serial port to connect. Needed for native USB port only
   }
-
   Serial.println("Access Point Web Server");
-
   pinMode(led, OUTPUT);      // set the LED pin mode
-
   // check for the WiFi module:
   if (WiFi.status() == WL_NO_MODULE) {
     Serial.println("Communication with WiFi module failed!");
     // don't continue
     while (true);
   }
-
   String fv = WiFi.firmwareVersion();
   if (fv < WIFI_FIRMWARE_LATEST_VERSION) {
     Serial.println("Please upgrade the firmware");
   }
-
   // by default the local IP address will be 192.168.4.1
   // you can override it with the following:
   // WiFi.config(IPAddress(10, 0, 0, 1));
-
   // print the network name (SSID);
   Serial.print("Creating access point named: ");
   Serial.println(ssid);
-
   // Create open network. Change this line if you want to create an WEP network:
   status = WiFi.beginAP(ssid, pass);
   if (status != WL_AP_LISTENING) {
@@ -67,13 +60,10 @@ void setup() {
     // don't continue
     while (true);
   }
-
   // wait 10 seconds for connection:
   delay(10000);
-
   // start the web server on port 80
   server.begin();
-
   // you're connected now, so print out the status
   printWiFiStatus();
 }
