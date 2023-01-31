@@ -10,6 +10,7 @@ import cv2
 import numpy as np
 import calibration_clean as cal
 import time
+import numba
 
 try:
     import apriltag
@@ -361,6 +362,7 @@ if __name__ == "__main__":
 
     # perspective transformation on stream
     video = cv2.VideoCapture("http://localhost:8081/stream/video.mjpeg")
+    video.set(cv2.CAP_PROP_FPS, 10)
     time.sleep(2)
     ret, frame = video.read()
 
@@ -372,15 +374,29 @@ if __name__ == "__main__":
 
     dim = (810, 810)
     print("click on the corners of the table")
-    M = perspective_transoformation(frame, dim)
+    M = perspective_transoformation(frame.copy(), dim)
+    video.release()
 
+    video = cv2.VideoCapture("http://localhost:8081/stream/video.mjpeg")
+
+    option = apriltag.DetectorOptions(families="tag36h11")
+    detector = apriltag.Detector(option)
+    count = 0
     while True:
+        if count % 3 != 0:
+            ret, frame = video.read()
+            count += 1
+            continue
+
         ret, frame = video.read()
+        # frame = detect_red(frame)
+        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         if not ret:
             continue
         frame = cv2.undistort(frame, mtx, dist, None, newcameramtx)
         frame = cv2.warpPerspective(frame, M, dim)
-        # frame = detect_red(frame)
+        result = detector.detect(frame)
+        print(result)
         cv2.imshow("frame", frame)
         key = cv2.waitKey(1)
         if key == ord("q"):
