@@ -4,8 +4,8 @@
 #include "arduino_secrets.h"
 
 ///////please enter your sensitive data in the Secret tab/arduino_secrets.h
-char ssid[] = SEC_SSID;        // your network SSID (name)
-char pass[] = SEC_PW;    // your network password (use for WPA, or use as key for WEP)
+char ssid[] = "DESKTOP-E1TS9EK_1488";        // your network SSID (name)
+char pass[] = "46X)i457";    // your network password (use for WPA, or use as key for WEP)
 
 
 int led =  LED_BUILTIN;
@@ -17,12 +17,7 @@ int keyIndex = 0;            // your network key Index number (needed only for W
 
 //IPAddress server(74,125,232,128);  // numeric IP for Google (no DNS)
 
-char server[] = "";    // name address for Google (using DNS)
-// Initialize the Ethernet client library
-
-// with the IP address and port of the server
-
-// that you want to connect to (port 80 is default for HTTP):
+char server[] = "www.google.com";    // name address for Google (using DNS)
 WiFiClient client;
 
 void setup() {
@@ -37,6 +32,7 @@ void setup() {
     // don't continue
     while (true);
   }
+  
   String fv = WiFi.firmwareVersion();
   if (fv < WIFI_FIRMWARE_LATEST_VERSION) {
     Serial.println("Please upgrade the firmware");
@@ -50,10 +46,19 @@ void setup() {
     // wait 10 seconds for connection:
     delay(10000);
   }
+  
+  while (status != WL_CONNECTED) {
+    Serial.print("Attempting to connect to SSID: ");
+    Serial.println(ssid);
+    // Connect to WPA/WPA2 network. Change this line if using open or WEP network:
+    status = WiFi.begin(ssid, pass);
+    // wait 10 seconds for connection:
+    delay(10000);
+  }
+
   Serial.println("Connected to wifi");
   printWifiStatus();
   Serial.println("\nStarting connection to server...");
-
   // if you get a connection, report back via serial:
   if (client.connect(server, 80)) {
     Serial.println("connected to server");
