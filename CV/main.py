@@ -406,23 +406,24 @@ def apriltag_detector_procedure(
         video.release()
 
     video_getter = VideoGet(src).start()
-    # video_shower = VideoShow(video_getter.frame).start()
-    if module is apriltag:
-        option = apriltag.DetectorOptions(families="tag36h11")
-        detector = apriltag.Detector(option)
-        detect = detector.detect
-
-    elif module is pupil_apriltags:
-        detector = pupil_apriltags.Detector(families="tag36h11")
-        detect = detector.detect
-
-    elif module is cv2.aruco:
-        detector = cv2.aruco.ArucoDetector()
-        detect = detector.detectMarkers
-
-    else:
-        raise ValueError("module not supported")
-
+    #video_shower = VideoShow(video_getter.frame).start()
+    try: 
+        if module is apriltag:
+            option = apriltag.DetectorOptions(families="tag36h11")
+            detector = apriltag.Detector(option)
+            detect = detector.detect
+    except:
+        try:
+            if module is pupil_apriltags:
+                detector = pupil_apriltags.Detector(families="tag36h11")
+                detect = detector.detect
+        except:
+            try:
+                if module is cv2.aruco:
+                    detector = cv2.aruco.ArucoDetector()
+                    detect = detector.detectMarkers
+            except:
+                raise ValueError("module not supported")
     prev_point = np.array([0, 0])
     current_position = None
     interval = 0
@@ -484,9 +485,9 @@ def apriltag_detector_procedure(
         if key == ord("q"):
             video_getter.stop()
             break
-
-        # This code dosen't work for me (dev)
-        """video_shower.frame = frame
+        # This code dosen't work for me (dev) - Yh no idea why
+        """
+        video_shower.frame = frame
         if video_getter.stopped or video_shower.stopped:
             video_shower.stop()
             video_getter.stop()
