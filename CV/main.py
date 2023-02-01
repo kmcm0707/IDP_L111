@@ -508,6 +508,5 @@ if __name__ == "__main__":
     """video = cv2.VideoCapture(0)
     detect_apriltag_2(video)
     video.release()"""
-   
 
     cv2.destroyAllWindows()
