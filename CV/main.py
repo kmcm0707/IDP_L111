@@ -8,11 +8,17 @@
 import sys
 import time
 from threading import Thread
-import cv2
-import numpy as np
 import calibration_clean as cal
 
 # import numba
+
+try:
+    import cv2
+    import numpy as np
+except ImportError:
+    print("dependencies not installed")
+    print("run 'pip install -r requirements.txt' to install dependencies")
+    exit()
 
 try:
     import apriltag
@@ -241,7 +247,7 @@ def detect_red_stream(stream):
 
         if not check:
             continue
-        # frame = cal.undistorted_live_feed(frame)
+        # frame = cal.undistort_frame(frame)
         # converting from RGB to HVS
         hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 
@@ -297,7 +303,7 @@ def detect_apriltag(img):
 def detect_apriltag_stream_opencv(frame):
     """detects apriltag in a stream using OpenCV implementation of apriltag
     detection algorimth"""
-    frame = cal.undistorted_live_feed(frame)
+    frame = cal.undistort_frame(frame)
     frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     corners, ids, rejected = Detector.detectMarkers(frame)
     print(corners)
@@ -406,8 +412,8 @@ def apriltag_detector_procedure(
         video.release()
 
     video_getter = VideoGet(src).start()
-    #video_shower = VideoShow(video_getter.frame).start()
-    try: 
+    # video_shower = VideoShow(video_getter.frame).start()
+    try:
         if module is apriltag:
             option = apriltag.DetectorOptions(families="tag36h11")
             detector = apriltag.Detector(option)
@@ -428,6 +434,7 @@ def apriltag_detector_procedure(
     current_position = None
     interval = 0
     prev_time = time.time()
+    positions = []
     first_time = True
     while True:
 
@@ -447,12 +454,17 @@ def apriltag_detector_procedure(
 
         result = detect(frame)
         if len(result) > 0:
+            if first_time:
+                first_time = False
+                continue
 
             x, y = result[0].center
 
             # if first_time:
             current_position = np.array([x, y])
             # first_time = False
+
+            positions.append(current_position)
 
             interval = time.time() - prev_time
             speed = (result[0].center - prev_point) / interval
@@ -474,12 +486,18 @@ def apriltag_detector_procedure(
                 color=(255, 255, 255),
                 thickness=-1,
             )
-            try:
-                frame = cv2.rectangle(frame, np.uint32(a), np.uint32(c), (0, 0, 255), 2)
-            except:
-                continue
+            frame = cv2.polylines(
+                frame, [np.int32(result[0].corners)], True, (255, 255, 255), 2
+            )
             print(speed)
+            if first_time:
+                frame = cv2.polylines(
+                    frame, [np.int32(positions)], False, (0, 0, 255), 2
+                )
+                first_time = False
 
+        if not first_time:
+            frame = cv2.polylines(frame, [np.int32(positions)], False, (0, 0, 255), 2)
         cv2.imshow("frame", frame)
         key = cv2.waitKey(1)
         if key == ord("q"):
@@ -497,7 +515,8 @@ def apriltag_detector_procedure(
 
 
 if __name__ == "__main__":
-    # apriltag_detector_procedure(0, fix_distortion=False, fix_perspective=False)
+    apriltag_detector_procedure(0, fix_distortion=False, fix_perspective=False)
+    exit()
     # for mac users
     apriltag_detector_procedure(
         "http://localhost:8081/stream/video.mjpeg",
@@ -547,7 +566,7 @@ if __name__ == "__main__":
 
     while True:
         ret, frame = video.read()
-        # frame = cal.undistorted_live_feed(frame)
+        # frame = cal.undistort_frame(frame)
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         corners, ids, rejected = Detector.detectMarkers(frame)
         print(corners)

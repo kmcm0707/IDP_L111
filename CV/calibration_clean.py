@@ -1,5 +1,12 @@
-import cv2
-import numpy as np
+try:
+    import cv2
+    import os
+    import numpy as np
+except ImportError:
+    print("dependencies not installed")
+    print("run 'pip install -r requirements.txt' to install dependencies")
+    exit()
+
 import glob
 import shutil
 
