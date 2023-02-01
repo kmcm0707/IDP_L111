@@ -26,17 +26,6 @@ fish_eyed_flags = (
     cv2.fisheye.CALIB_RECOMPUTE_EXTRINSIC + cv2.fisheye.CALIB_FIX_SKEW
 )  # + cv2.fisheye.CALIB_CHECK_COND
 
-# the best one is 2
-num = 2
-
-mtx = np.fromfile(f"trial_data/mtx_{num}.dat")
-dist = np.fromfile(f"trial_data/dist_{num}.dat")
-opt_mtx = np.fromfile(f"trial_data/opt_mtx_{num}.dat")
-
-mtx = np.reshape(mtx, (3, 3))
-dist = np.reshape(dist, (1, 5))
-opt_mtx = np.reshape(opt_mtx, (3, 3))
-
 # coordinate on the image
 imgpoints = []
 
@@ -169,9 +158,9 @@ def calib_from_img_dir(dirpath, file_ext=".jpg", silent=False):
 
     img = cv2.undistort(img, mtx, dist, None, newcameramtx)
     number = 4
-    mtx.tofile(f"trial_data/mtx_{number}.dat")
-    dist.tofile(f"trial_data/dist_{number}.dat")
-    newcameramtx.tofile(f"trial_data/opt_mtx_{number}.dat")
+    mtx.tofile(f"calibration_data/mtx_{number}.dat")
+    dist.tofile(f"calibration_data/dist_{number}.dat")
+    newcameramtx.tofile(f"calibration_data/opt_mtx_{number}.dat")
 
     cv2.imshow("calib_img", img)
 
@@ -207,9 +196,9 @@ def sort_img(path_to_imgs, file_ext=".jpg", silent=False):
 
 def test_cal_val(number=1):
     "function for testing privious calibration values"
-    mtx = np.fromfile(f"trial_data/mtx_{number}.dat")
-    dist = np.fromfile(f"trial_data/dist_{number}.dat")
-    opt_mtx = np.fromfile(f"trial_data/opt_mtx_{number}.dat")
+    mtx = np.fromfile(f"calibration_data/mtx_{number}.dat")
+    dist = np.fromfile(f"calibration_data/dist_{number}.dat")
+    opt_mtx = np.fromfile(f"calibration_data/opt_mtx_{number}.dat")
 
     mtx = np.reshape(mtx, (3, 3))
     dist = np.reshape(dist, (1, 5))
@@ -253,8 +242,9 @@ def undistorted_live_feed(num=2):
             return
 
 
-def undistort_frame(img, mtx=mtx, dist=dist, new_mtx=opt_mtx):
+def undistort_frame(img):
     "function to undistort a frame/image"
+    mtx, dist, new_mtx = load_vals(2)
     h, w = img.shape[:2]
     # newcameramtx, roi = cv2.getOptimalNewCameraMatrix(mtx, dist, (w, h), 1, (w, h))
 
@@ -263,9 +253,9 @@ def undistort_frame(img, mtx=mtx, dist=dist, new_mtx=opt_mtx):
 
 
 def load_vals(num=2):
-    mtx = np.fromfile(f"trial_data/mtx_{num}.dat")
-    dist = np.fromfile(f"trial_data/dist_{num}.dat")
-    opt_mtx = np.fromfile(f"trial_data/opt_mtx_{num}.dat")
+    mtx = np.fromfile(f"calibration_data/mtx_{num}.dat")
+    dist = np.fromfile(f"calibration_data/dist_{num}.dat")
+    opt_mtx = np.fromfile(f"calibration_data/opt_mtx_{num}.dat")
 
     mtx = np.reshape(mtx, (3, 3))
     dist = np.reshape(dist, (1, 5))
@@ -275,9 +265,6 @@ def load_vals(num=2):
 
 
 if __name__ == "__main__":
-    # calib_from_img_dir("successful_imgs")
-    # undistorted_live_feed()
-    # test_cal_val(3)
+    # best one is 2
+    mtx, dist, opt_mtx = load_vals(2)
     test_cal_val(2)
-
-    # sort_img("img_dump_manual_table3_2")

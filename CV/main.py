@@ -25,6 +25,8 @@ except ImportError:
 there as 3 different detect red function because open cv requires cv2.waitKey()
 to work. if that is outside of the function it wont work.
 """
+
+
 class VideoGet:
     """
     Class that continuously gets frames from a VideoCapture object
@@ -36,7 +38,7 @@ class VideoGet:
         (self.grabbed, self.frame) = self.stream.read()
         self.stopped = False
 
-    def start(self):    
+    def start(self):
         Thread(target=self.get, args=()).start()
         return self
 
@@ -49,6 +51,7 @@ class VideoGet:
 
     def stop(self):
         self.stopped = True
+
 
 def detect_line(frame):
     "detects / highlights line in a an image"
@@ -325,16 +328,137 @@ def perspective_transoformation(img, dim):
     return M
 
 
+def apriltag_detector_procedure(
+    src, module=apriltag, fix_distortion=True, fix_perspective=True, alpha=1
+):
+    if fix_distortion or fix_perspective:
+        mtx, dist, newcameramtx = cal.load_vals(2)
+
+    if fix_perspective:
+        video = cv2.VideoCapture(src)
+        time.sleep(2)
+        ret, frame = video.read()
+        if not ret:
+            print("error with video feed")
+            return -1
+
+        if alpha == 0:
+            h, w = frame.shape[:2]
+            newcameramtx, roi = cv2.getOptimalNewCameraMatrix(
+                mtx, dist, (w, h), 0, (w, h)
+            )
+            x, y, w, h = roi
+            frame = frame[y : y + h, x : x + w]
+
+        frame = cv2.undistort(frame, mtx, dist, None, newcameramtx)
+
+        dim = (810, 810)
+        print("click on the corners of the table")
+        M = perspective_transoformation(frame.copy(), dim)
+        video.release()
+
+    video_getter = VideoGet(src).start()
+    if module is apriltag:
+        option = apriltag.DetectorOptions(families="tag36h11")
+        detector = apriltag.Detector(option)
+        detect = detector.detect
+
+    elif module is pupil_apriltags:
+        detector = apriltag.Detector(families="tag36h11")
+        detect = detector.detect
+
+    elif module is cv2.aruco:
+        detector = cv2.aruco.ArucoDetector()
+        detect = detector.detectMarkers
+
+    else:
+        raise ValueError("module not supported")
+
+    prev_point = np.array([0, 0])
+    current_position = None
+    interval = 0
+    prev_time = time.time()
+    first_time = True
+    while True:
+
+        frame = video_getter.frame
+        # frame = detect_red(frame)
+        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+
+        """if not ret:
+            print("no frame retereived; trying apain")
+            continue"""
+
+        if fix_distortion:
+            frame = cv2.undistort(frame, mtx, dist, None, newcameramtx)
+
+        if fix_perspective:
+            frame = cv2.warpPerspective(frame, M, dim)
+
+        result = detect(frame)
+        if len(result) > 0:
+
+            x, y = result[0].center
+
+            # if first_time:
+            current_position = np.array([x, y])
+            # first_time = False
+
+            interval = time.time() - prev_time
+            speed = (result[0].center - prev_point) / interval
+            current_position += speed * interval
+
+            prev_time = time.time()
+
+            prev_point = result[0].center
+
+            a, b, c, d = result[0].corners
+            frame = cv2.circle(
+                frame, (int(x), int(y)), radius=10, color=(0, 0, 255), thickness=-1
+            )
+            print(current_position)
+            frame = cv2.circle(
+                frame,
+                current_position.astype("int32"),
+                radius=12,
+                color=(255, 255, 255),
+                thickness=-1,
+            )
+            try:
+                frame = cv2.rectangle(frame, np.uint32(a), np.uint32(c), (0, 0, 255), 2)
+            except:
+                continue
+            print(speed)
+        cv2.imshow("frame", frame)
+        key = cv2.waitKey(1)
+        if key == ord("q"):
+            video_getter.stop()
+            break
+
+    cv2.destroyAllWindows()
+
+
 if __name__ == "__main__":
+    # apriltag_detector_procedure(0, fix_distortion=False, fix_perspective=False)
+    # for mac users
+    """apriltag_detector_procedure(
+        "http://localhost:8081/stream/video.mjpeg",
+    )"""
+
+    # for windows users
+    apriltag_detector_procedure(
+        "http://localhost:8081/stream/video.mjpeg",
+        module=pupil_apriltags,
+    )
 
     # For lines
     """for i in range(1, 9):
-    img = cv2.imread(f"test_imgs/{i}.png")
+    img = cv2.imread(f"calib_imgs/test_imgs/{i}.png")
     detect_line(img)"""
 
     # For blocks
     """for i in range(1, 9):
-        img = cv2.imread(f"test_imgs/{i}.png")
+        img = cv2.imread(f"calib_imgs/test_imgs/{i}.png")
         img = cal.undistort_frame(img)
         dim = (810, 810)
         M = perspective_transoformation(img, dim)
@@ -384,49 +508,6 @@ if __name__ == "__main__":
     """video = cv2.VideoCapture(0)
     detect_apriltag_2(video)
     video.release()"""
-
-    # perspective transformation on stream
-    video = cv2.VideoCapture("http://localhost:8081/stream/video.mjpeg")
-    video.set(cv2.CAP_PROP_FPS, 10)
-    time.sleep(2)
-    ret, frame = video.read()
-
-    h, w = frame.shape[:2]
-    mtx, dist, newcameramtx = cal.load_vals(2)
-    # newcameramtx, roi = cv2.getOptimalNewCameraMatrix(mtx, dist, (w, h), 1, (w, h))
-
-    frame = cv2.undistort(frame, mtx, dist, None, newcameramtx)
-
-    dim = (810, 810)
-    print("click on the corners of the table")
-    M = perspective_transoformation(frame.copy(), dim)
-    video.release()
-
-    #video = cv2.VideoCapture("http://localhost:8081/stream/video.mjpeg")
-    video_getter = VideoGet("http://localhost:8081/stream/video.mjpeg").start()
-    
-    #option = pupil_apriltags.DetectorOptions(families="tag36h11")
-    detector = pupil_apriltags.Detector(families="tag36h11")
-    count = 0
-    while True:
-        #if count % 3 != 0:
-         #   ret, frame = video.read()
-          #  count += 1
-           # continue
-
-        frame = video_getter.frame
-        # frame = detect_red(frame)
-        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        if not ret:
-            continue
-        frame = cv2.undistort(frame, mtx, dist, None, newcameramtx)
-        frame = cv2.warpPerspective(frame, M, dim)
-        result = detector.detect(frame)
-        print(result)
-        cv2.imshow("frame", frame)
-        key = cv2.waitKey(1)
-        if key == ord("q"):
-            video_getter.stop()
-            break
+   
 
     cv2.destroyAllWindows()
