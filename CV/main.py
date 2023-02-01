@@ -1,18 +1,19 @@
 #!../env/bin/python
-# -*- coding: utf-8 -*-
+# coding: utf-8
 # python 3.9.16
-"""Comaints code for detection for cube, line or ar tag
 
-
+"""Main code for computer vision comaints code for detection for cube, line or ar tag
 """
+
+import sys
+import time
+from threading import Thread
 
 import cv2
 import numpy as np
 import calibration_clean as cal
-import time
-import numba
-import pupil_apriltags
-from threading import Thread
+
+# import numba
 
 try:
     import apriltag
@@ -20,11 +21,15 @@ except ImportError:
     print("Apriltag not installed")
     print("not required so ignore this error")
 
-"""Main code for computer vision
+try:
+    import pupil_apriltags
+except ImportError:
+    print("Pupil apriltag not installed")
+    print("not required so ignore this error")
 
-there as 3 different detect red function because open cv requires cv2.waitKey()
-to work. if that is outside of the function it wont work.
-"""
+if "pupil_apriltags" not in sys.modules and "apriltag" not in sys.modules:
+
+    raise ModuleNotFoundError("neither apriltag detection module installed")
 
 
 class VideoGet:
@@ -52,8 +57,7 @@ class VideoGet:
     def stop(self):
         self.stopped = True
 
-<<<<<<< HEAD
-=======
+
 class VideoShow:
     """
     Class that continuously shows a frame using a dedicated thread.
@@ -62,12 +66,14 @@ class VideoShow:
     def __init__(self, frame=None):
         self.frame = frame
         self.stopped = False
-    
+
     def start(self):
         Thread(target=self.show, args=()).start()
         return self
 
     def show(self):
+        pass
+
         while not self.stopped:
             cv2.imshow("Video", self.frame)
             if cv2.waitKey(1) == ord("q"):
@@ -75,7 +81,7 @@ class VideoShow:
 
     def stop(self):
         self.stopped = True
->>>>>>> 2aef92f63aaea1ab73a080c4d3edac0c507a77d3
+
 
 def detect_line(frame):
     "detects / highlights line in a an image"
@@ -169,13 +175,13 @@ def detect_red(frame):
 
     # Bitwise-AND mask and original image
     # res = cv2.bitwise_and(frame, frame, mask=mask)
-    return frame
     # cv2.imshow('frame', frame)
     # cv2.imshow('mask', mask)
     # cv2.imshow('res', res)
     # cv2.waitKey(1)
-
     # cv2.destroyAllWindows()
+
+    return frame
 
 
 def detect_red_video(video):
@@ -308,7 +314,7 @@ def detect_apriltag_stream_opencv(frame):
 
 
 def detect_apriltag_stream_apriltag(video):
-    """detects apriltag in a stream using apriltag implementation of apriltag
+    """Detects apriltag in a stream using apriltag implementation of apriltag
     detection algorimth"""
     option = apriltag.DetectorOptions(families="tag36h11")
     detector = apriltag.Detector(option)
@@ -354,7 +360,27 @@ def perspective_transoformation(img, dim):
 
 def apriltag_detector_procedure(
     src, module=apriltag, fix_distortion=True, fix_perspective=True, alpha=1
-):
+) -> None:
+    """Continueously detects for april tag in a stream
+
+    Parameters
+    ----------
+    src: int, or string
+        source of the stream e.g. 0 or url
+
+    module: module, optional
+        module to use for detection
+
+    fix_distortion: bool, optional
+        if true undistorts the image
+
+    fix_perspective: bool, optional
+        if true corrects the perspective of the image
+
+    alpha: int, optional
+        if 0 then undistorted images shows no void
+    """
+
     if fix_distortion or fix_perspective:
         mtx, dist, newcameramtx = cal.load_vals(2)
 
@@ -382,13 +408,14 @@ def apriltag_detector_procedure(
         video.release()
 
     video_getter = VideoGet(src).start()
+    # video_shower = VideoShow(video_getter.frame).start()
     if module is apriltag:
         option = apriltag.DetectorOptions(families="tag36h11")
         detector = apriltag.Detector(option)
         detect = detector.detect
 
     elif module is pupil_apriltags:
-        detector = apriltag.Detector(families="tag36h11")
+        detector = pupil_apriltags.Detector(families="tag36h11")
         detect = detector.detect
 
     elif module is cv2.aruco:
@@ -453,11 +480,19 @@ def apriltag_detector_procedure(
             except:
                 continue
             print(speed)
+
         cv2.imshow("frame", frame)
         key = cv2.waitKey(1)
         if key == ord("q"):
             video_getter.stop()
             break
+
+        # This code dosen't work for me (dev)
+        """video_shower.frame = frame
+        if video_getter.stopped or video_shower.stopped:
+            video_shower.stop()
+            video_getter.stop()
+            break"""
 
     cv2.destroyAllWindows()
 
@@ -465,15 +500,15 @@ def apriltag_detector_procedure(
 if __name__ == "__main__":
     # apriltag_detector_procedure(0, fix_distortion=False, fix_perspective=False)
     # for mac users
-    """apriltag_detector_procedure(
-        "http://localhost:8081/stream/video.mjpeg",
-    )"""
-
-    # for windows users
     apriltag_detector_procedure(
         "http://localhost:8081/stream/video.mjpeg",
-        module=pupil_apriltags,
     )
+
+    # for windows users
+    """apriltag_detector_procedure(
+        "http://localhost:8081/stream/video.mjpeg",
+        module=pupil_apriltags,
+    )"""
 
     # For lines
     """for i in range(1, 9):
@@ -532,52 +567,3 @@ if __name__ == "__main__":
     """video = cv2.VideoCapture(0)
     detect_apriltag_2(video)
     video.release()"""
-
-<<<<<<< HEAD
-=======
-    # perspective transformation on stream
-    video = cv2.VideoCapture("http://localhost:8081/stream/video.mjpeg")
-    video.set(cv2.CAP_PROP_FPS, 10)
-    time.sleep(2)
-    ret, frame = video.read()
-
-    h, w = frame.shape[:2]
-    mtx, dist, newcameramtx = cal.load_vals(2)
-    # newcameramtx, roi = cv2.getOptimalNewCameraMatrix(mtx, dist, (w, h), 1, (w, h))
-
-    frame = cv2.undistort(frame, mtx, dist, None, newcameramtx)
-
-    dim = (810, 810)
-    print("click on the corners of the table")
-    M = perspective_transoformation(frame.copy(), dim)
-    video.release()
-
-    #video = cv2.VideoCapture("http://localhost:8081/stream/video.mjpeg")
-    video_getter = VideoGet("http://localhost:8081/stream/video.mjpeg").start()
-    video_shower = VideoShow(video_getter.frame).start()
-    #option = pupil_apriltags.DetectorOptions(families="tag36h11")
-    detector = pupil_apriltags.Detector(families="tag36h11")
-    count = 0
-    while True:
-        #if count % 3 != 0:
-         #   ret, frame = video.read()
-          #  count += 1
-           # continue
-
-        frame = video_getter.frame
-        # frame = detect_red(frame)
-        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        if not ret:
-            continue
-        frame = cv2.undistort(frame, mtx, dist, None, newcameramtx)
-        frame = cv2.warpPerspective(frame, M, dim)
-        result = detector.detect(frame)
-        print(result)
-        video_shower.frame = frame
-        if video_getter.stopped or video_shower.stopped:
-            video_shower.stop()
-            video_getter.stop()
-            break
-
->>>>>>> 2aef92f63aaea1ab73a080c4d3edac0c507a77d3
-    cv2.destroyAllWindows()
