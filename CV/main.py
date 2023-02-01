@@ -52,6 +52,30 @@ class VideoGet:
     def stop(self):
         self.stopped = True
 
+<<<<<<< HEAD
+=======
+class VideoShow:
+    """
+    Class that continuously shows a frame using a dedicated thread.
+    """
+
+    def __init__(self, frame=None):
+        self.frame = frame
+        self.stopped = False
+    
+    def start(self):
+        Thread(target=self.show, args=()).start()
+        return self
+
+    def show(self):
+        while not self.stopped:
+            cv2.imshow("Video", self.frame)
+            if cv2.waitKey(1) == ord("q"):
+                self.stopped = True
+
+    def stop(self):
+        self.stopped = True
+>>>>>>> 2aef92f63aaea1ab73a080c4d3edac0c507a77d3
 
 def detect_line(frame):
     "detects / highlights line in a an image"
@@ -509,4 +533,51 @@ if __name__ == "__main__":
     detect_apriltag_2(video)
     video.release()"""
 
+<<<<<<< HEAD
+=======
+    # perspective transformation on stream
+    video = cv2.VideoCapture("http://localhost:8081/stream/video.mjpeg")
+    video.set(cv2.CAP_PROP_FPS, 10)
+    time.sleep(2)
+    ret, frame = video.read()
+
+    h, w = frame.shape[:2]
+    mtx, dist, newcameramtx = cal.load_vals(2)
+    # newcameramtx, roi = cv2.getOptimalNewCameraMatrix(mtx, dist, (w, h), 1, (w, h))
+
+    frame = cv2.undistort(frame, mtx, dist, None, newcameramtx)
+
+    dim = (810, 810)
+    print("click on the corners of the table")
+    M = perspective_transoformation(frame.copy(), dim)
+    video.release()
+
+    #video = cv2.VideoCapture("http://localhost:8081/stream/video.mjpeg")
+    video_getter = VideoGet("http://localhost:8081/stream/video.mjpeg").start()
+    video_shower = VideoShow(video_getter.frame).start()
+    #option = pupil_apriltags.DetectorOptions(families="tag36h11")
+    detector = pupil_apriltags.Detector(families="tag36h11")
+    count = 0
+    while True:
+        #if count % 3 != 0:
+         #   ret, frame = video.read()
+          #  count += 1
+           # continue
+
+        frame = video_getter.frame
+        # frame = detect_red(frame)
+        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        if not ret:
+            continue
+        frame = cv2.undistort(frame, mtx, dist, None, newcameramtx)
+        frame = cv2.warpPerspective(frame, M, dim)
+        result = detector.detect(frame)
+        print(result)
+        video_shower.frame = frame
+        if video_getter.stopped or video_shower.stopped:
+            video_shower.stop()
+            video_getter.stop()
+            break
+
+>>>>>>> 2aef92f63aaea1ab73a080c4d3edac0c507a77d3
     cv2.destroyAllWindows()
