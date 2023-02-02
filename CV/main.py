@@ -8,7 +8,6 @@
 import sys
 import time
 from threading import Thread
-
 import cv2
 import numpy as np
 import calibration_clean as cal
@@ -72,7 +71,6 @@ class VideoShow:
         return self
 
     def show(self):
-        pass
 
         while not self.stopped:
             cv2.imshow("Video", self.frame)
