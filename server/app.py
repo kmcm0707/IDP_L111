@@ -1,6 +1,6 @@
 from flask import Flask, jsonify
 import json
-import requests
+import requests 
 
 app = Flask(__name__)
 
@@ -12,7 +12,7 @@ def data():
     return jsonify(dictToReturn)
 
 if __name__ == '__main__':
-    app.run()
+    app.run(host='0.0.0.0', port=5000, debug=True)
 # $ flask run --host=0.0.0.0
 # flask --app main run --host=0.0.0.0
 # POST http://localhost:5000/data

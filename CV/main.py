@@ -11,6 +11,11 @@ from threading import Thread
 import cv2
 import numpy as np
 import calibration_clean as cal
+import os 
+import json
+import requests
+from sys import platform
+
 
 # import numba
 
@@ -357,8 +362,7 @@ def perspective_transoformation(img, dim):
 
 
 def apriltag_detector_procedure(
-    src, module=apriltag, fix_distortion=True, fix_perspective=True, alpha=1
-) -> None:
+    src, module, fix_distortion=True, fix_perspective=True, alpha=1) -> None:
     """Continueously detects for april tag in a stream
 
     Parameters
@@ -498,17 +502,23 @@ def apriltag_detector_procedure(
 
 if __name__ == "__main__":
     # apriltag_detector_procedure(0, fix_distortion=False, fix_perspective=False)
-    # for mac users
-    apriltag_detector_procedure(
-        "http://localhost:8081/stream/video.mjpeg",
-    )
+    if platform == "darwin":
+        os.system("python "+ "../server/app.py &" )
+        # mac
+        apriltag_detector_procedure(
+            "http://localhost:8081/stream/video.mjpeg",
+            module=apriltags,
+        )
+    elif platform == "win32":
+        # Windows
+        os.system("start /b python ../server/app.py")
+        apriltag_detector_procedure(
+            "http://localhost:8081/stream/video.mjpeg",
+            module=pupil_apriltags,
+        )
 
-    # for windows users
-    """apriltag_detector_procedure(
-        "http://localhost:8081/stream/video.mjpeg",
-        module=pupil_apriltags,
-    )"""
-
+    
+    
     # For lines
     """for i in range(1, 9):
     img = cv2.imread(f"calib_imgs/test_imgs/{i}.png")
