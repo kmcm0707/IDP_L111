@@ -7,9 +7,9 @@ app = Flask(__name__)
 
 @app.route("/data", methods=['POST', 'GET'])
 def data():
-    #dictToReturn = {'answer':42}
-    #return jsonify(dictToReturn)
-    return "Hello World!"
+    dictToReturn = {'llf':42,
+                    'rlf': 33}
+    return jsonify(dictToReturn)
 
 if __name__ == '__main__':
     app.run()
@@ -17,4 +17,4 @@ if __name__ == '__main__':
 # flask --app main run --host=0.0.0.0
 # POST http://localhost:5000/data
 # GET http://localhost:5000/data
-# POST http://128.232.250.181:5000/data
+# POST http://10.248.155.126:5000/data
