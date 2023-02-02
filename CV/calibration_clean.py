@@ -1,3 +1,4 @@
+#!../env/bin/python
 try:
     import cv2
     import os
@@ -122,37 +123,42 @@ def general_calibration(objpoints, imgpoints, shape):
     return ret, mtx, dist, rvecs, tvecs
 
 
-def calib_from_img_dir(dirpath, file_ext=".jpg", silent=False):
+def calib_from_img_dir(
+    dirpaths: list or str, file_ext=".jpg", silent=False, number=100
+):
     """calculates calibration parametres (mtr, dist, rvecs, tvecs, optimised_mtx)
     from a directory of images while sorting good ones manually
     """
+    if isinstance(dirpaths, str):
+        dirpaths = [dirpaths]
+
     objpoints = []
     imgpoints = []
+    for dirpath in dirpaths:
+        images = glob.glob(f"{dirpath}/*{file_ext}")
+        for fname in images:
+            img = cv2.imread(fname)
+            print("frame")
+            # cv2.imshow("img", img)
+            img_dimension = img.shape[:-1]
+            ret, each_objpoints, each_imgpoints = process(img, criteria, flags=flags)
 
-    images = glob.glob(f"{dirpath}/*{file_ext}")
-    for fname in images:
-        img = cv2.imread(fname)
-        print("frame")
-        cv2.imshow("img", img)
-        img_dimension = img.shape[:-1]
-        ret, each_objpoints, each_imgpoints = process(img, criteria, flags=flags)
+            if ret == True:  # noqa: E712
+                print(fname)
 
-        if ret == True:  # noqa: E712
-            print(fname)
+                if silent:
+                    continue
 
-            if silent:
-                continue
-
-            cv2.drawChessboardCorners(img, (7, 6), each_imgpoints, ret)
-            cv2.imshow("image", img)
-            key = cv2.waitKey()
-            if key == ord("q"):
-                return
-            elif key == ord("y"):
-                objpoints.append(each_objpoints)
-                imgpoints.append(each_imgpoints)
-            else:
-                continue
+                cv2.drawChessboardCorners(img, (7, 6), each_imgpoints, ret)
+                cv2.imshow("image", img)
+                key = cv2.waitKey()
+                if key == ord("q"):
+                    return
+                elif key == ord("y"):
+                    objpoints.append(each_objpoints)
+                    imgpoints.append(each_imgpoints)
+                else:
+                    continue
 
     ret, mtx, dist, rvecs, tvecs = general_calibration(
         objpoints, imgpoints, img_dimension
@@ -164,7 +170,7 @@ def calib_from_img_dir(dirpath, file_ext=".jpg", silent=False):
     newcameramtx, roi = cv2.getOptimalNewCameraMatrix(mtx, dist, (w, h), 1, (w, h))
 
     img = cv2.undistort(img, mtx, dist, None, newcameramtx)
-    number = 4
+
     mtx.tofile(f"calibration_data/mtx_{number}.dat")
     dist.tofile(f"calibration_data/dist_{number}.dat")
     newcameramtx.tofile(f"calibration_data/opt_mtx_{number}.dat")
@@ -201,7 +207,7 @@ def sort_img(path_to_imgs, file_ext=".jpg", silent=False):
                 continue
 
 
-def test_cal_val(number=1):
+def test_cal_val(number=1, alpha=1):
     "function for testing privious calibration values"
     mtx = np.fromfile(f"calibration_data/mtx_{number}.dat")
     dist = np.fromfile(f"calibration_data/dist_{number}.dat")
@@ -211,16 +217,16 @@ def test_cal_val(number=1):
     dist = np.reshape(dist, (1, 5))
     opt_mtx = np.reshape(opt_mtx, (3, 3))
 
-    img = cv2.imread("img_dump_manual_table3_2/1.jpg")
+    img = cv2.imread("calib_imgs/img_dump_manual_table3_2/1.jpg")
     cv2.imshow("before", img)
 
     h, w = img.shape[:2]
-    newcameramtx, roi = cv2.getOptimalNewCameraMatrix(mtx, dist, (w, h), 1, (w, h))
+    newcameramtx, roi = cv2.getOptimalNewCameraMatrix(mtx, dist, (w, h), alpha, (w, h))
 
     img = cv2.undistort(img, mtx, dist, None, newcameramtx)
 
-    x, y, w, h = roi
-    # img = img[y : y + h, x : x + w]
+    """x, y, w, h = roi
+    img = img[y : y + h, x : x + w]"""
 
     cv2.imshow("after", img)
     cv2.waitKey()
@@ -273,5 +279,10 @@ def load_vals(num=2):
 
 if __name__ == "__main__":
     # best one is 2
-    mtx, dist, opt_mtx = load_vals(2)
-    test_cal_val(2)
+    # mtx, dist, opt_mtx = load_vals()
+    # test_cal_val(2, 1)
+
+    calib_from_img_dir(
+        "calib_imgs/successful_imgs",
+        number=7,
+    )

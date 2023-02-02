@@ -386,7 +386,7 @@ def apriltag_detector_procedure(
     """
 
     if fix_distortion or fix_perspective:
-        mtx, dist, newcameramtx = cal.load_vals(2)
+        mtx, dist, newcameramtx = cal.load_vals(6)
 
     if fix_perspective:
         video = cv2.VideoCapture(src)
@@ -515,12 +515,13 @@ def apriltag_detector_procedure(
 
 
 if __name__ == "__main__":
-    apriltag_detector_procedure(0, fix_distortion=False, fix_perspective=False)
-    exit()
+    # apriltag_detector_procedure(0, fix_distortion=False, fix_perspective=False)
+
     # for mac users
     apriltag_detector_procedure(
         "http://localhost:8081/stream/video.mjpeg",
     )
+    exit()
 
     # for windows users
     """apriltag_detector_procedure(
