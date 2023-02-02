@@ -507,7 +507,7 @@ if __name__ == "__main__":
         # mac
         apriltag_detector_procedure(
             "http://localhost:8081/stream/video.mjpeg",
-            module=apriltags,
+            module=apriltag,
         )
     elif platform == "win32":
         # Windows
