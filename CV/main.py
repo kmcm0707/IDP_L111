@@ -13,7 +13,7 @@ import os
 import json
 import requests
 from sys import platform
-
+import math
 
 # import numba
 
@@ -41,7 +41,9 @@ if "pupil_apriltags" not in sys.modules and "apriltag" not in sys.modules:
 
     raise ModuleNotFoundError("neither apriltag detection module installed")
 
-
+error = 0 #error - turn left is +ve ,  turn right is -ve
+last_error = 0
+I = 0
 class VideoGet:
     """
     Class that continuously gets frames from a VideoCapture object
@@ -462,9 +464,9 @@ def apriltag_detector_procedure(
             if first_time:
                 first_time = False
                 continue
-
+            
             x, y = result[0].center
-
+            theta = result[0].pose_R[0][0]
             # if first_time:
             current_position = np.array([x, y])
             # first_time = False
@@ -593,3 +595,40 @@ if __name__ == "__main__":
     """video = cv2.VideoCapture(0)
     detect_apriltag_2(video)
     video.release()"""
+
+def PID_controller(current_position: np.ndarray, target_position: np.ndarray, predicted_position: np.ndarray):
+    k_i = 0.001
+    k_p = 30
+    k_d = 10
+    basespeed = 200
+    """This function will return the error for the PID controller"""
+    deltaX = current_position[0] - predicted_position[0]
+    deltaY = current_position[1] - predicted_position[1]
+    targetX = current_position[0] - target_position[0]
+    targetY = current_position[1] - target_position[1]
+
+    velocityAngle = (math.atan2(deltaY.toDouble(), deltaX.toDouble())).toFloat() + math.pi
+    targetAngle = (math.atan2(targetY.toDouble(), targetX.toDouble())).toFloat() + math.pi
+    
+    if(velocityAngle == 2*math.pi or targetAngle == 2*math.pi):
+        velocityAngle = 0
+        targetAngle = 0
+
+    temp_error = targetAngle - velocityAngle
+    if(error > math.pi or (error < 0 and error > -math.pi) ):
+        #turn right - left faster
+        temp_error = -abs(temp_error)
+    else:
+        #turn left - right faster
+        temp_error = abs(temp_error)
+    error = temp_error
+
+    I = I + error
+    D = error - last_error
+    last_error = error
+
+    motorspeed = (int)(k_p*error + k_d * D + k_i * I)
+    leftspeed = basespeed - motorspeed
+    rightspeed = basespeed + motorspeed
+    
+
