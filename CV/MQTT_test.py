@@ -43,3 +43,38 @@ class VideoGet:
 # use these for the speed
 client.publish("IDP_2023_Follower_left_speed", "211")
 client.publish("IDP_2023_Follower_right_speed", "211")
+
+video = cv2.VideoCapture(0)
+    while True:
+        ret, frame = video.read()
+        if ret == False:
+            continue
+        cv2.imshow("Frame", frame)
+        key = cv2.waitKey(1)
+        if key == ord("q"):
+            break
+
+        if key == ord("w"):
+            left = 155
+            right = 155
+            print("forward")
+
+        elif key == ord("s"):
+            left = 1
+            right = 1
+            print("back")
+
+        elif key == ord("a"):
+            left = 1
+            right = 155
+            print("right")
+
+        elif key == ord("d"):
+            left = 155
+            right = 1
+            print("left")
+
+        client.publish("IDP_2023_Follower_left_speed", str(left))
+        client.publish("IDP_2023_Follower_right_speed", str(right))
+
+    cv2.destroyAllWindows()
