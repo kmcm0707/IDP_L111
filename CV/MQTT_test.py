@@ -38,7 +38,7 @@ class VideoGet:
     def stop(self):
         self.stopped = True
 
-# insert keyboard code here
+# insert keyboard code here with thread of video get
 
 # use these for the speed
 client.publish("IDP_2023_Follower_left_speed", "211")
