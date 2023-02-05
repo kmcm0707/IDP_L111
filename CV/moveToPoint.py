@@ -9,14 +9,12 @@ import sys
 import time
 from threading import Thread
 import calibration_clean as cal
+import paho.mqtt.client as mqtt
 import os
 import json
 import requests
 from sys import platform
 import math
-from flask import Flask, jsonify
-import json
-import requests 
 # import numba
 
 try:
@@ -45,6 +43,16 @@ if "pupil_apriltags" not in sys.modules and "apriltag" not in sys.modules:
 
 rightspeed = 0
 leftspeed = 0
+
+# mqttBroker = "broker.hivemq.com"
+# Alternative message brokers:
+# mqttBroker = "public.mqtthq.com"
+mqttBroker = "test.mosquitto.org"
+# mqttBroker =  "public.mqtthq.com"
+client = mqtt.Client("Python")
+client.connect(mqttBroker)
+
+
 class VideoGet:
     """
     Class that continuously gets frames from a VideoCapture object
@@ -93,51 +101,6 @@ class VideoShow:
 
     def stop(self):
         self.stopped = True
-
-
-def detect_apriltag(img):
-    """detects apriltag in an image using OpenCV implementation of apriltag
-    detection algorimths"""
-    corners, ids, rejectedImgPoints = cv2.aruco.ArucoDetector.detectMarkers(img)
-    print(corners, ids, rejectedImgPoints)
-
-
-def detect_apriltag_stream_opencv(frame):
-    """detects apriltag in a stream using OpenCV implementation of apriltag
-    detection algorimth"""
-    frame = cal.undistort_frame(frame)
-    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    corners, ids, rejected = Detector.detectMarkers(frame)
-    print(corners)
-    if len(corners) > 0:
-        print(corners[0].shape)
-        x = corners[0][0, 0].astype("int32")
-        y = corners[0][0, 2].astype("int32")
-
-        cv2.rectangle(frame, x, y, (255, 0, 0))
-
-    return frame
-
-
-def detect_apriltag_stream_apriltag(video):
-    """Detects apriltag in a stream using apriltag implementation of apriltag
-    detection algorimth"""
-    option = apriltag.DetectorOptions(families="tag36h11")
-    detector = apriltag.Detector(option)
-    while True:
-        ret, frame = video.read()
-        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        if not ret:
-            print("video not ret")
-            return
-
-        result = detector.detect(frame)
-        print(result)
-
-        cv2.imshow("frame", frame)
-        key = cv2.waitKey(1)
-        if key == ord("q"):
-            return
 
 
 def perspective_transoformation(img, dim):
@@ -241,7 +204,6 @@ def apriltag_detector_procedure(
     positions = []
     first_time = True
     while True:
-
         frame = video_getter.frame
         # frame = detect_red(frame)
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -263,7 +225,8 @@ def apriltag_detector_procedure(
                     if event == cv2.EVENT_LBUTTONDOWN:
                         print(x, y)
                         controller.set_target((x, y))
-                        cv2.destroyAllWindows()
+                        cv2.destroyAllWindows(np.array([x, y]))
+                        positions.append()
 
                 cv2.imshow("img", frame.copy())
                 cv2.setMouseCallback("img", click_envent)
@@ -328,14 +291,7 @@ def apriltag_detector_procedure(
 
     cv2.destroyAllWindows()
 
-app = Flask(__name__)
-
-@app.route("/data", methods=['POST', 'GET'])
-def data():
-    dictToReturn = {'llf':leftspeed,
-                    'rlf': rightspeed}
-    return jsonify(dictToReturn)
-
+    
 class PID:
     def __init__(self):
         self.kp = 30
@@ -349,6 +305,7 @@ class PID:
         self.current_position = np.array([0, 0])
         self.target_position = np.array([0, 0])
         self.predicted_position = np.array([0, 0])
+        self.elapsed_time = time.time()
 
     def get_right_speed(self):
         return self.right_speed
@@ -397,11 +354,15 @@ class PID:
         self.right_speed = basespeed + motorspeed
         leftspeed = self.left_speed
         rightspeed = self.right_speed
+        if time.time() - self.elapsed_time > 0.4:
+            self.elapsed_time = time.time()
+            self.publish()
 
-def start_flaskapp():
-    app.run(host='0.0.0.0', port=5000, debug=False)
+    def publish():
+        client.publish("IDP_2023_Follower_left_speed", str(leftspeed))
+        client.publish("IDP_2023_Follower_right_speed", str(rightspeed))
 
-def start_everythingelse():
+def start_everything():
     controller = PID()
     if platform == "darwin":
         # mac
@@ -417,69 +378,7 @@ def start_everythingelse():
             module=pupil_apriltags,
             controller = controller,
         )
+
 if __name__ == "__main__":
-    # apriltag_detector_procedure(0, fix_distortion=False, fix_perspective=False)
-    t2 = Thread(target=start_flaskapp)
-    t2.start()
-    t1 = Thread(target=start_everythingelse)
-    t1.start()
-
-    # For lines
-    """for i in range(1, 9):
-    img = cv2.imread(f"calib_imgs/test_imgs/{i}.png")
-    detect_line(img)"""
-
-    # For blocks
-    """for i in range(1, 9):
-        img = cv2.imread(f"calib_imgs/test_imgs/{i}.png")
-        img = cal.undistort_frame(img)
-        dim = (810, 810)
-        M = perspective_transoformation(img, dim)
-        img = cv2.warpPerspective(img, M, dim)
-        img = detect_red(img)
-        cv2.imshow("img", img)
-        cv2.waitKey(0)"""
-
-    # this tries to apply this object detection with camera
-    """video = cv2.VideoCapture(0)
-
-    detect_red_video(video)
-
-    video.release()"""
-
-    # this code works for the mjpeg stream
-    """stream = cv2.VideoCapture("http://localhost:8081/stream/video.mjpeg")
-
-    detect_red_stream(stream)
-    stream.release()"""
-
-    # this does apriltag detection on stream
-    # video = cv2.VideoCapture("http://localhost:8081/stream/video.mjpeg")
-    """video = cv2.VideoCapture(0)
-    Detector = cv2.aruco.ArucoDetector(
-        cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_APRILTAG_36h11)
-    )
-
-    while True:
-        ret, frame = video.read()
-        # frame = cal.undistort_frame(frame)
-        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        corners, ids, rejected = Detector.detectMarkers(frame)
-        print(corners)
-        if len(corners) > 0:
-            print(corners[0].shape)
-            x = corners[0][0, 0].astype("int32")
-            y = corners[0][0, 2].astype("int32")
-
-            cv2.rectangle(frame, x, y, (255, 0, 0))
-        cv2.imshow("feed", frame)
-        key = cv2.waitKey(1)
-        if key == ord("q"):
-            break"""
-
-    # detecting apriltag using apriltag liberary
-    """video = cv2.VideoCapture(0)
-    detect_apriltag_2(video)
-    video.release()"""
-
-
+    start_everything()
+    
