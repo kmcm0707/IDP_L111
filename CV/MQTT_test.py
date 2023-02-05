@@ -45,13 +45,18 @@ class VideoGet:
 
 
 def forward():
-    client.publish("IDP_2023_Follower_left_speed", "211")
-    client.publish("IDP_2023_Follower_right_speed", "211")
+    client.publish("IDP_2023_Follower_left_speed", 211)
+    client.publish("IDP_2023_Follower_right_speed", 211)
 
 
 def stop():
-    client.publish("IDP_2023_Follower_left_speed", "1")
-    client.publish("IDP_2023_Follower_right_speed", "1  ")
+    client.publish("IDP_2023_Follower_left_speed", 1)
+    client.publish("IDP_2023_Follower_right_speed", 1)
+
+
+def back():
+    client.publish("IDP_2023_Follower_left_speed", -211)
+    client.publish("IDP_2023_Follower_right_speed", -211)
 
 
 def left():
@@ -59,9 +64,29 @@ def left():
     client.publish("IDP_2023_Follower_right_speed", "211")
 
 
+def back_left():
+    client.publish("IDP_2023_Follower_left_speed", "1")
+    client.publish("IDP_2023_Follower_right_speed", "-211")
+
+
 def right():
     client.publish("IDP_2023_Follower_left_speed", "211")
     client.publish("IDP_2023_Follower_right_speed", "1")
+
+
+def back_right():
+    client.publish("IDP_2023_Follower_left_speed", "-211")
+    client.publish("IDP_2023_Follower_right_speed", "1")
+
+
+def clockwise_rotate():
+    client.publish("IDP_2023_Follower_left_speed", "211")
+    client.publish("IDP_2023_Follower_right_speed", "-211")
+
+
+def anticlockwise_rotate():
+    client.publish("IDP_2023_Follower_left_speed", "-211")
+    client.publish("IDP_2023_Follower_right_speed", "211")
 
 
 # insert keyboard code here with thread of video get
@@ -70,32 +95,47 @@ def right():
 client.publish("IDP_2023_Follower_left_speed", "211")
 client.publish("IDP_2023_Follower_right_speed", "211")
 
-"""img = cv2.imread("calib_imgs/img_dump_manual_table3_2/0.jpg")
-cv2.imshow("img", img)"""
+img = cv2.imread("calib_imgs/img_dump_manual_table3_2/0.jpg")
+cv2.imshow("img", img)
 
-video = VideoGet(0).start()
+# video = VideoGet(0).start()
 
 while True:
-    img = video.frame
-    cv2.imshow("img", img)
+    # img = video.frame
+    # cv2.imshow("img", img)
 
     key = cv2.waitKey(2)
-    if key == ord("q"):
+    if key == ord("z"):
         break
 
     elif key == ord("w"):
         forward()
 
+    elif key == ord(" "):
+        back()
+
+    elif key == ord("q"):
+        left()
+
+    elif key == ord("a"):
+        back_left()
+
+    elif key == ord("e"):
+        right()
+
+    elif key == ord("d"):
+        back_right()
+
+    elif key == ord("p"):
+        clockwise_rotate()
+
+    elif key == ord("o"):
+        anticlockwise_rotate()
+
     elif key == ord("s"):
         stop()
 
-    elif key == ord("a"):
-        left()
-
-    elif key == ord("d"):
-        right()
-
-video.stop()
+# video.stop()
 cv2.destroyAllWindows()
 
 """
