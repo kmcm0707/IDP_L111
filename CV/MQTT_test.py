@@ -1,17 +1,22 @@
+#!../env/bin/python
 import paho.mqtt.client as mqtt
 import time
 from threading import Thread
 import calibration_clean as cal
+
 import cv2
+
+# import keyboard  # pip install keyboard
 import numpy as np
 
 # mqttBroker = "broker.hivemq.com"
 # Alternative message brokers:
-# mqttBroker = "public.mqtthq.com" 
+# mqttBroker = "public.mqtthq.com"
 mqttBroker = "test.mosquitto.org"
-# mqttBroker =  "public.mqtthq.com" 
+# mqttBroker =  "public.mqtthq.com"
 client = mqtt.Client("Python")
-client.connect(mqttBroker) 
+client.connect(mqttBroker)
+
 
 class VideoGet:
     """
@@ -38,43 +43,63 @@ class VideoGet:
     def stop(self):
         self.stopped = True
 
+
+def forward():
+    client.publish("IDP_2023_Follower_left_speed", "211")
+    client.publish("IDP_2023_Follower_right_speed", "211")
+
+
+def stop():
+    client.publish("IDP_2023_Follower_left_speed", "1")
+    client.publish("IDP_2023_Follower_right_speed", "1  ")
+
+
+def left():
+    client.publish("IDP_2023_Follower_left_speed", "1")
+    client.publish("IDP_2023_Follower_right_speed", "211")
+
+
+def right():
+    client.publish("IDP_2023_Follower_left_speed", "211")
+    client.publish("IDP_2023_Follower_right_speed", "1")
+
+
 # insert keyboard code here with thread of video get
 
 # use these for the speed
 client.publish("IDP_2023_Follower_left_speed", "211")
 client.publish("IDP_2023_Follower_right_speed", "211")
 
-video = cv2.VideoCapture(0)
-    while True:
-        ret, frame = video.read()
-        if ret == False:
-            continue
-        cv2.imshow("Frame", frame)
-        key = cv2.waitKey(1)
-        if key == ord("q"):
-            break
+"""img = cv2.imread("calib_imgs/img_dump_manual_table3_2/0.jpg")
+cv2.imshow("img", img)"""
 
-        if key == ord("w"):
-            left = 155
-            right = 155
-            print("forward")
+video = VideoGet(0).start()
 
-        elif key == ord("s"):
-            left = 1
-            right = 1
-            print("back")
+while True:
+    img = video.frame
+    cv2.imshow("img", img)
 
-        elif key == ord("a"):
-            left = 1
-            right = 155
-            print("right")
+    key = cv2.waitKey(2)
+    if key == ord("q"):
+        break
 
-        elif key == ord("d"):
-            left = 155
-            right = 1
-            print("left")
+    elif key == ord("w"):
+        forward()
 
-        client.publish("IDP_2023_Follower_left_speed", str(left))
-        client.publish("IDP_2023_Follower_right_speed", str(right))
+    elif key == ord("s"):
+        stop()
 
-    cv2.destroyAllWindows()
+    elif key == ord("a"):
+        left()
+
+    elif key == ord("d"):
+        right()
+
+video.stop()
+cv2.destroyAllWindows()
+
+"""
+keyboard.on_press_key("w", forward)
+keyboard.on_press_key("s", stop)
+keyboard.on_press_key("a", left)
+keyboard.on_press_key("d", right)"""

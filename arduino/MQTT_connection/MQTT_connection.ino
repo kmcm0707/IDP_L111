@@ -1,10 +1,10 @@
 #include <ArduinoMqttClient.h>
 #include <WiFiNINA.h>
-#include "arduino_secrets.h"
+// #include "arduino_secrets.h"
 
 ///////please enter your sensitive data in the Secret tab/arduino_secrets.h
-char ssid[] = "DESKTOP-E1TS9EK_1488";        // your network SSID (name)
-char pass[] = "46X)i457";     // your network password
+char ssid[] = "--";        // your network SSID (name)
+char pass[] = "--";     // your network password
 
 WiFiClient wifiClient;
 MqttClient mqttClient(wifiClient);
@@ -56,7 +56,7 @@ void setup() {
   // subscribe to a topic
   mqttClient.subscribe(topic);
   mqttClient.subscribe(topic2);
-  mqttClient.subscribe(topic3);
+  // mqttClient.subscribe(topic3);
 
   // topics can be unsubscribed using:
   // mqttClient.unsubscribe(topic);
@@ -66,7 +66,7 @@ void setup() {
   Serial.print("Topic: ");
   Serial.println(topic2);
   Serial.print("Topic: ");
-  Serial.println(topic3);
+  // Serial.println(topic3);
 
   Serial.println();
 }
@@ -87,7 +87,7 @@ void onMqttMessage(int messageSize) {
 
   // use the Stream interface to print the contents
   while (mqttClient.available()) {
-    Serial.print((char)mqttClient.read());
+    (char)mqttClient.read()
   }
   Serial.println();
   Serial.println();
