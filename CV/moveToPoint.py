@@ -309,7 +309,7 @@ def apriltag_detector_procedure(
 
 class PID:
     def __init__(self):
-        self.kp = 70
+        self.kp = 30
         self.ki = 0.001
         self.kd = 10
         self.prev_error = 0
