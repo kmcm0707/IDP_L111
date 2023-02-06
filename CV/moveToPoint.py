@@ -381,20 +381,21 @@ class PID:
 
 def start_everything():
     controller = PID()
-    if platform == "darwin":
-        # mac
-        apriltag_detector_procedure(
-            "http://localhost:8081/stream/video.mjpeg",
-            module=apriltag,
-            controller=controller,
-        )
-    elif platform == "win32":
+    if platform == "win32":
         # Windows
         apriltag_detector_procedure(
             "http://localhost:8081/stream/video.mjpeg",
             module=pupil_apriltags,
             controller=controller,
         )
+    else:
+        # mac
+        apriltag_detector_procedure(
+            "http://localhost:8081/stream/video.mjpeg",
+            module=apriltag,
+            controller=controller,
+        )
+    
 
 
 if __name__ == "__main__":
