@@ -12,9 +12,11 @@ import calibration_clean as cal
 import paho.mqtt.client as mqtt
 import os
 import json
-import requests
+
+# import requests
 from sys import platform
 import math
+
 # import numba
 
 try:
@@ -151,7 +153,7 @@ def apriltag_detector_procedure(
     """
 
     if fix_distortion or fix_perspective:
-        mtx, dist, newcameramtx = cal.load_vals(6)
+        mtx, dist, newcameramtx = cal.load_vals(6)  # best one is 6
 
     if fix_perspective:
         video = cv2.VideoCapture(src)
@@ -173,11 +175,10 @@ def apriltag_detector_procedure(
 
         dim = (810, 810)
         print("click on the corners of the table")
-        M = perspective_transoformation(frame.copy(), dim)
-        
+        M = perspective_transoformation(frame, dim)
+
         video.release()
 
-    
     video_getter = VideoGet(src).start()
     # video_shower = VideoShow(video_getter.frame).start()
     try:
@@ -185,20 +186,25 @@ def apriltag_detector_procedure(
             option = apriltag.DetectorOptions(families="tag36h11")
             detector = apriltag.Detector(option)
             detect = detector.detect
+
+            def angle(result):
+                v = result.corners[1] - result.corners[0]
+                v = v / np.linalg.norm(v)
+                vertical = np.array([1, 0])
+                angle = np.arccos(np.dot(v, vertical))
+                return angle
+
     except:
         try:
             if module is pupil_apriltags:
                 detector = pupil_apriltags.Detector(families="tag36h11")
                 detect = detector.detect
+                angle = lambda result: result.pose_R[0][0]
         except:
-            try:
-                if module is cv2.aruco:
-                    detector = cv2.aruco.ArucoDetector()
-                    detect = detector.detectMarkers
-            except:
-                raise ValueError("module not supported")
+            raise ValueError("need a valid module")
+
     prev_point = np.array([0, 0])
-    current_position = None
+    current_position = np.array([0, 0])
     interval = 0
     prev_time = time.time()
     positions = []
@@ -221,6 +227,7 @@ def apriltag_detector_procedure(
         result = detect(frame)
         if len(result) > 0:
             if first_time:
+
                 def click_envent(event, x, y, flags, params):
                     if event == cv2.EVENT_LBUTTONDOWN:
                         print(x, y)
@@ -232,14 +239,12 @@ def apriltag_detector_procedure(
                 cv2.setMouseCallback("img", click_envent)
                 first_time = False
                 continue
-            
-            x, y = result[0].center
-            theta = result[0].pose_R[0][0]
-            # if first_time:
-            current_position = np.array([x, y])
-            controller.set_current_position(current_position)
 
-            # first_time = False
+            x, y = result[0].center
+            theta = angle(result[0])
+
+            current_position[:] = [x, y]
+            controller.set_current_position(current_position)
 
             positions.append(current_position)
 
@@ -276,6 +281,7 @@ def apriltag_detector_procedure(
 
         if not first_time:
             frame = cv2.polylines(frame, [np.int32(positions)], False, (0, 0, 255), 2)
+
         cv2.imshow("frame", frame)
         key = cv2.waitKey(1)
         if key == ord("q"):
@@ -291,7 +297,7 @@ def apriltag_detector_procedure(
 
     cv2.destroyAllWindows()
 
-    
+
 class PID:
     def __init__(self):
         self.kp = 30
@@ -309,18 +315,19 @@ class PID:
 
     def get_right_speed(self):
         return self.right_speed
+
     def get_left_speed(self):
         return self.left_speed
 
     def set_current_position(self, current_position):
-        self.current_position = current_position
-    
+        self.current_position[:] = current_position
+
     def set_target_position(self, target_position):
-        self.target_position = target_position
+        self.target_position[:] = target_position
 
     def set_predicted_position(self, predicted_position):
-        self.predicted_position = predicted_position
-    
+        self.predicted_position[:] = predicted_position
+
     def PID_controller_update(self):
         basespeed = 200
         """This function will return the error for the PID controller"""
@@ -329,19 +336,19 @@ class PID:
         targetX = self.current_position[0] - self.target_position[0]
         targetY = self.current_position[1] - self.target_position[1]
 
-        velocityAngle = (math.atan2(deltaY.toDouble(), deltaX.toDouble())) + math.pi
-        targetAngle = (math.atan2(targetY.toDouble(), targetX.toDouble())) + math.pi
-        
-        if(velocityAngle == 2*math.pi or targetAngle == 2*math.pi):
+        velocityAngle = math.atan2(deltaY, deltaX) + math.pi
+        targetAngle = math.atan2(targetY, targetX) + math.pi
+
+        if velocityAngle == 2 * math.pi or targetAngle == 2 * math.pi:
             velocityAngle = 0
             targetAngle = 0
 
         temp_error = targetAngle - velocityAngle
-        if(self.error > math.pi or (self.error < 0 and self.error > -math.pi) ):
-            #turn right - left faster
+        if self.error > math.pi or (self.error < 0 and self.error > -math.pi):
+            # turn right - left faster
             temp_error = -abs(temp_error)
         else:
-            #turn left - right faster
+            # turn left - right faster
             temp_error = abs(temp_error)
         self.error = temp_error
 
@@ -349,7 +356,9 @@ class PID:
         D = self.error - self.prev_error
         self.prev_error = self.error
 
-        motorspeed = int(self.k_p*self.error + self.k_d * D + self.k_i * self.integral)
+        motorspeed = int(
+            self.k_p * self.error + self.k_d * D + self.k_i * self.integral
+        )
         self.left_speed = basespeed - motorspeed
         self.right_speed = basespeed + motorspeed
         leftspeed = self.left_speed
@@ -362,23 +371,25 @@ class PID:
         client.publish("IDP_2023_Follower_left_speed", str(leftspeed))
         client.publish("IDP_2023_Follower_right_speed", str(rightspeed))
 
+
 def start_everything():
     controller = PID()
     if platform == "darwin":
         # mac
         apriltag_detector_procedure(
-            "http://localhost:8081/stream/video.mjpeg",
+            # "http://localhost:8081/stream/video.mjpeg",
+            0,
             module=apriltag,
-            controller = controller,
+            controller=controller,
         )
     elif platform == "win32":
         # Windows
         apriltag_detector_procedure(
             "http://localhost:8081/stream/video.mjpeg",
             module=pupil_apriltags,
-            controller = controller,
+            controller=controller,
         )
+
 
 if __name__ == "__main__":
     start_everything()
-    

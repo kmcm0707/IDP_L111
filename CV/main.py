@@ -11,7 +11,6 @@ from threading import Thread
 import calibration_clean as cal
 import os
 import json
-import requests
 from sys import platform
 import math
 
@@ -427,16 +426,29 @@ def apriltag_detector_procedure(
             option = apriltag.DetectorOptions(families="tag36h11")
             detector = apriltag.Detector(option)
             detect = detector.detect
+
+            def angle(result):
+                v = result.corners[1] - result.corners[0]
+                v = v / np.linalg.norm(v)
+                vertical = np.array([1, 0])
+                angle = np.arccos(np.dot(v, vertical))
+                return angle
+
     except:
         try:
             if module is pupil_apriltags:
                 detector = pupil_apriltags.Detector(families="tag36h11")
                 detect = detector.detect
+                angle = lambda result: result.pose_R[0][0]
         except:
             try:
                 if module is cv2.aruco:
                     detector = cv2.aruco.ArucoDetector()
                     detect = detector.detectMarkers
+
+                    def angle(result):
+                        raise NotImplementedError
+
             except:
                 raise ValueError("module not supported")
     prev_point = np.array([0, 0])
@@ -463,12 +475,11 @@ def apriltag_detector_procedure(
 
         result = detect(frame)
         if len(result) > 0:
-            if first_time:
-                first_time = False
-                continue
+
+            print(result)
 
             x, y = result[0].center
-            theta = result[0].pose_R[0][0]
+            theta = angle(result[0])
             # if first_time:
             current_position = np.array([x, y])
             # first_time = False
@@ -487,7 +498,6 @@ def apriltag_detector_procedure(
             frame = cv2.circle(
                 frame, (int(x), int(y)), radius=10, color=(0, 0, 255), thickness=-1
             )
-            print(current_position)
             frame = cv2.circle(
                 frame,
                 current_position.astype("int32"),
@@ -523,10 +533,50 @@ def apriltag_detector_procedure(
     cv2.destroyAllWindows()
 
 
+def PID_controller(
+    current_position: np.ndarray,
+    target_position: np.ndarray,
+    predicted_position: np.ndarray,
+):
+    k_i = 0.001
+    k_p = 30
+    k_d = 10
+    basespeed = 200
+    """This function will return the error for the PID controller"""
+    deltaX = current_position[0] - predicted_position[0]
+    deltaY = current_position[1] - predicted_position[1]
+    targetX = current_position[0] - target_position[0]
+    targetY = current_position[1] - target_position[1]
+
+    velocityAngle = math.atan2(deltaY, deltaX) + math.pi
+    targetAngle = math.atan2(targetY, targetX) + math.pi
+
+    if velocityAngle == 2 * math.pi or targetAngle == 2 * math.pi:
+        velocityAngle = 0
+        targetAngle = 0
+
+    temp_error = targetAngle - velocityAngle
+    if error > math.pi or (error < 0 and error > -math.pi):
+        # turn right - left faster
+        temp_error = -abs(temp_error)
+    else:
+        # turn left - right faster
+        temp_error = abs(temp_error)
+    error = temp_error
+
+    I = I + error
+    D = error - last_error
+    last_error = error
+
+    motorspeed = int(k_p * error + k_d * D + k_i * I)
+    leftspeed = basespeed - motorspeed
+    rightspeed = basespeed + motorspeed
+
+
 if __name__ == "__main__":
     # apriltag_detector_procedure(0, fix_distortion=False, fix_perspective=False)
     if platform == "darwin":
-        os.system("python " + "../server/app.py &")
+        # os.system("python " + "../server/app.py &")
         # mac
         apriltag_detector_procedure(
             "http://localhost:8081/stream/video.mjpeg",
@@ -534,7 +584,7 @@ if __name__ == "__main__":
         )
     elif platform == "win32":
         # Windows
-        os.system("start /b python ../server/app.py")
+        # os.system("start /b python ../server/app.py")
         apriltag_detector_procedure(
             "http://localhost:8081/stream/video.mjpeg",
             module=pupil_apriltags,
@@ -597,47 +647,3 @@ if __name__ == "__main__":
     """video = cv2.VideoCapture(0)
     detect_apriltag_2(video)
     video.release()"""
-
-
-def PID_controller(
-    current_position: np.ndarray,
-    target_position: np.ndarray,
-    predicted_position: np.ndarray,
-):
-    k_i = 0.001
-    k_p = 30
-    k_d = 10
-    basespeed = 200
-    """This function will return the error for the PID controller"""
-    deltaX = current_position[0] - predicted_position[0]
-    deltaY = current_position[1] - predicted_position[1]
-    targetX = current_position[0] - target_position[0]
-    targetY = current_position[1] - target_position[1]
-
-    velocityAngle = (
-        math.atan2(deltaY.toDouble(), deltaX.toDouble())
-    ).toFloat() + math.pi
-    targetAngle = (
-        math.atan2(targetY.toDouble(), targetX.toDouble())
-    ).toFloat() + math.pi
-
-    if velocityAngle == 2 * math.pi or targetAngle == 2 * math.pi:
-        velocityAngle = 0
-        targetAngle = 0
-
-    temp_error = targetAngle - velocityAngle
-    if error > math.pi or (error < 0 and error > -math.pi):
-        # turn right - left faster
-        temp_error = -abs(temp_error)
-    else:
-        # turn left - right faster
-        temp_error = abs(temp_error)
-    error = temp_error
-
-    I = I + error
-    D = error - last_error
-    last_error = error
-
-    motorspeed = (int)(k_p * error + k_d * D + k_i * I)
-    leftspeed = basespeed - motorspeed
-    rightspeed = basespeed + motorspeed
