@@ -352,8 +352,8 @@ class PID:
             velocityAngle = 0
             targetAngle = 0
 
-        temp_error = targetAngle - velocityAngle
-        if self.error > math.pi:
+        temp_error = abs(targetAngle - velocityAngle)
+        if temp_error > math.pi:
             # turn right - left faster
             temp_error = -abs(temp_error)
         else:
@@ -381,20 +381,21 @@ class PID:
 
 def start_everything():
     controller = PID()
-    if platform == "darwin":
-        # mac
-        apriltag_detector_procedure(
-            "http://localhost:8081/stream/video.mjpeg",
-            module=apriltag,
-            controller=controller,
-        )
-    elif platform == "win32":
+    if platform == "win32":
         # Windows
         apriltag_detector_procedure(
             "http://localhost:8081/stream/video.mjpeg",
             module=pupil_apriltags,
             controller=controller,
         )
+    else:
+        # mac
+        apriltag_detector_procedure(
+            "http://localhost:8081/stream/video.mjpeg",
+            module=apriltag,
+            controller=controller,
+        )
+    
 
 
 if __name__ == "__main__":

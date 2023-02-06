@@ -138,7 +138,9 @@ void onMqttMessage(int messageSize) {
       m1->run(BACKWARD);
       speed = -speed;
     }
-    m1->setSpeed(speed);
+    if(speed > 255){
+      m1->setSpeed(255);
+    }
   }
   if (current_topic == topic2){
     Serial.println("right");
@@ -148,7 +150,10 @@ void onMqttMessage(int messageSize) {
       m2->run(BACKWARD);
       speed = -speed;
     }
-    m2->setSpeed(speed);
+    if(speed > 255){
+      m2->setSpeed(255);
+    }
+    
   }
   
   Serial.println();
