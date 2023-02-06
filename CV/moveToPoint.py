@@ -250,7 +250,7 @@ def apriltag_detector_procedure(
 
             interval = time.time() - prev_time
             speed = (result[0].center - prev_point) / interval
-            current_position += speed * interval
+            current_position += np.int64(speed * interval)
             controller.set_predicted_position(current_position)
             controller.PID_controller_update()
             prev_time = time.time()
@@ -300,7 +300,7 @@ def apriltag_detector_procedure(
 
 class PID:
     def __init__(self):
-        self.kp = 30
+        self.kp = 70
         self.ki = 0.001
         self.kd = 10
         self.prev_error = 0
@@ -356,20 +356,18 @@ class PID:
         D = self.error - self.prev_error
         self.prev_error = self.error
 
-        motorspeed = int(
-            self.k_p * self.error + self.k_d * D + self.k_i * self.integral
-        )
+        motorspeed = int(self.kp * self.error + self.kd * D + self.ki * self.integral)
         self.left_speed = basespeed - motorspeed
         self.right_speed = basespeed + motorspeed
-        leftspeed = self.left_speed
-        rightspeed = self.right_speed
-        if time.time() - self.elapsed_time > 0.4:
+        if time.time() - self.elapsed_time > 0.2:
             self.elapsed_time = time.time()
             self.publish()
 
-    def publish():
-        client.publish("IDP_2023_Follower_left_speed", str(leftspeed))
-        client.publish("IDP_2023_Follower_right_speed", str(rightspeed))
+    def publish(self):
+        client.publish("IDP_2023_Follower_left_speed", str(self.left_speed))
+        client.publish("IDP_2023_Follower_right_speed", str(self.right_speed))
+        print(f"right : {self.right_speed}")
+        print(f"left : {self.left_speed}")
 
 
 def start_everything():
@@ -377,8 +375,7 @@ def start_everything():
     if platform == "darwin":
         # mac
         apriltag_detector_procedure(
-            # "http://localhost:8081/stream/video.mjpeg",
-            0,
+            "http://localhost:8081/stream/video.mjpeg",
             module=apriltag,
             controller=controller,
         )

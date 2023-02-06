@@ -4,7 +4,7 @@
 // #include "arduino_secrets.h"
 
 ///////please enter your sensitive data in the Secret tab/arduino_secrets.h
-char ssid[] = "Diwakar's MacBook Pro";        // your network SSID (name)
+char ssid[] = "DevPhone";        // your network SSID (name)
 char pass[] = "jyugemujyugemu";     // your network password
 
 WiFiClient wifiClient;
