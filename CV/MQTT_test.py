@@ -95,14 +95,14 @@ def anticlockwise_rotate():
 client.publish("IDP_2023_Follower_left_speed", "211")
 client.publish("IDP_2023_Follower_right_speed", "211")
 
-img = cv2.imread("calib_imgs/img_dump_manual_table3_2/0.jpg")
-cv2.imshow("img", img)
+"""img = cv2.imread("calib_imgs/img_dump_manual_table3_2/0.jpg")
+cv2.imshow("img", img)"""
 
-# video = VideoGet(0).start()
+video = VideoGet("http://localhost:8081/stream/video.mjpeg").start()
 
 while True:
-    # img = video.frame
-    # cv2.imshow("img", img)
+    img = video.frame
+    cv2.imshow("img", img)
 
     key = cv2.waitKey(2)
     if key == ord("z"):
@@ -135,7 +135,7 @@ while True:
     elif key == ord("s"):
         stop()
 
-# video.stop()
+video.stop()
 cv2.destroyAllWindows()
 
 """

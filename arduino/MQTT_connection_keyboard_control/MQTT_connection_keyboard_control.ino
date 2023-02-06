@@ -4,8 +4,13 @@
 // #include "arduino_secrets.h"
 
 ///////please enter your sensitive data in the Secret tab/arduino_secrets.h
+<<<<<<< HEAD
 char ssid[] = "DESKTOP-E1TS9EK_1488";        // your network SSID (name)
 char pass[] = "46X)i457";     // your network password
+=======
+char ssid[] = "DevPhone";        // your network SSID (name)
+char pass[] = "jyugemujyugemu";     // your network password
+>>>>>>> e41d5c7192859a3fb892ecf62037239417aed96f
 
 WiFiClient wifiClient;
 MqttClient mqttClient(wifiClient);
