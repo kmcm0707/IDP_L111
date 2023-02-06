@@ -352,8 +352,8 @@ class PID:
             velocityAngle = 0
             targetAngle = 0
 
-        temp_error = targetAngle - velocityAngle
-        if self.error > math.pi:
+        temp_error = abs(targetAngle - velocityAngle)
+        if temp_error > math.pi:
             # turn right - left faster
             temp_error = -abs(temp_error)
         else:

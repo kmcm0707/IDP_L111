@@ -17,7 +17,6 @@ const char broker[] = "test.mosquitto.org";
 int        port     = 1883;
 String topic  = "IDP_2023_Follower_left_speed";
 String topic2  = "IDP_2023_Follower_right_speed";
-//const char topic3[]  = "real_unique_topic_3";
 
 String current_topic;
 
@@ -26,12 +25,15 @@ Adafruit_MotorShield AFMS = Adafruit_MotorShield();
 Adafruit_DCMotor *m1 = AFMS.getMotor(1); //left
 Adafruit_DCMotor *m2 = AFMS.getMotor(2); //right    
 
-
+// pins
 int left_line_follower = 0;
 int right_line_follower = 1;
 
-int linefollower_trigger = 500;
 int status_check = 0; //set to 1 after blocks picked up
+
+int speed;
+String speed_str;
+
 void setup() {
   // put your setup code here, to run once:
 
@@ -73,7 +75,6 @@ void setup() {
   // subscribe to a topic
   mqttClient.subscribe(topic);
   mqttClient.subscribe(topic2);
-  // mqttClient.subscribe(topic3);
 
   // topics can be unsubscribed using:
   // mqttClient.unsubscribe(topic);
@@ -82,8 +83,6 @@ void setup() {
   Serial.println(topic);
   Serial.print("Topic: ");
   Serial.println(topic2);
-  // Serial.print("Topic: ");
-  // Serial.println(topic3);
 
   Serial.println();
   
@@ -118,7 +117,7 @@ void line_follower(){
     {
       error = -5;
     }
-    if(!digitalRead(left_line_follower) <  &&  !digitalRead(right_line_follower)) // ultrasound
+    if(!digitalRead(left_line_follower) &&  !digitalRead(right_line_follower)) // ultrasound
     {
       if(status_check == 1) {
         /*digitalWrite(trigPin, LOW);
@@ -206,18 +205,7 @@ void onMqttMessage(int messageSize) {
   // use the Stream interface to print the contents
   speed_str = mqttClient.readString();
   speed = speed_str.toInt();
-  /*
-  if(messageSize == 1){
-  } else{
-    while (mqttClient.available()) {
-      for(int i=0; i<messageSize; i++){
-        speed_str[i] = mqttClient.read();
-      }
-    
-    speed_str[messageSize] = "\0";
-    speed = (int)speed_str;
-
-  }*/
+ 
   Serial.println(speed);
 
   if (current_topic == topic){
@@ -228,7 +216,9 @@ void onMqttMessage(int messageSize) {
       m1->run(BACKWARD);
       speed = -speed;
     }
-    m1->setSpeed(speed);
+    if(speed > 255){
+      m1->setSpeed(255);
+    } 
   }
   if (current_topic == topic2){
     Serial.println("right");
@@ -238,7 +228,9 @@ void onMqttMessage(int messageSize) {
       m2->run(BACKWARD);
       speed = -speed;
     }
-    m2->setSpeed(speed);
+    if(speed > 255){
+      m2->setSpeed(255);
+    }
   }
   
   Serial.println();
