@@ -49,7 +49,7 @@ void line_follower(){
     if(analogRead(left_line_follower) < linefollower_trigger &&  analogRead(right_line_follower) < linefollower_trigger) // ultrasound
     {
       if(status_check == 1) {
-        digitalWrite(trigPin, LOW);
+        /*digitalWrite(trigPin, LOW);
         delayMicroseconds(2);
         // Sets the trigPin on HIGH state for 10 micro seconds
         digitalWrite(trigPin, HIGH);
@@ -61,6 +61,7 @@ void line_follower(){
         distance = duration * 0.034 / 2;
         // Prints the distance IN CM
         //error = reference - distance;
+        */
       }
       else {
         error = last_error;

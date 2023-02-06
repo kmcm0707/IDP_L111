@@ -211,21 +211,22 @@ def apriltag_detector_procedure(
     frame = video_getter.frame
     frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     if fix_distortion:
-            frame = cv2.undistort(frame, mtx, dist, None, newcameramtx)
+        frame = cv2.undistort(frame, mtx, dist, None, newcameramtx)
 
     if fix_perspective:
         frame = cv2.warpPerspective(frame, M, dim)
-    
+
     def click_envent(event, x, y, flags, params):
         if event == cv2.EVENT_LBUTTONDOWN:
             print(x, y)
             controller.set_target_position(np.array([x, y]))
             cv2.destroyAllWindows()
-            ##positions.append(np.array([x, y]))
+            positions.append(np.array([x, y]))
 
     cv2.imshow("img", frame.copy())
     cv2.setMouseCallback("img", click_envent)
     key = cv2.waitKey(0)
+    print("hello")
 
     while True:
         frame = video_getter.frame
@@ -249,7 +250,7 @@ def apriltag_detector_procedure(
                 continue
 
             x, y = result[0].center
-            #theta = angle(result[0])
+            # theta = angle(result[0])
 
             current_position[:] = [x, y]
             controller.set_current_position(current_position)
@@ -258,7 +259,7 @@ def apriltag_detector_procedure(
 
             interval = time.time() - prev_time
             speed = (result[0].center - prev_point) / interval
-            current_position += np.int64(speed * interval*100)
+            current_position += np.int64(speed * interval * 100)
             controller.set_predicted_position(current_position)
             controller.PID_controller_update()
             prev_time = time.time()
