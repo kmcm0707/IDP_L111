@@ -199,7 +199,6 @@ def apriltag_detector_procedure(
             if module is pupil_apriltags:
                 detector = pupil_apriltags.Detector(families="tag36h11")
                 detect = detector.detect
-                angle = lambda result: result.pose_R[0][0]
         except:
             raise ValueError("need a valid module")
 
@@ -209,6 +208,25 @@ def apriltag_detector_procedure(
     prev_time = time.time()
     positions = []
     first_time = True
+    frame = video_getter.frame
+    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    if fix_distortion:
+            frame = cv2.undistort(frame, mtx, dist, None, newcameramtx)
+
+    if fix_perspective:
+        frame = cv2.warpPerspective(frame, M, dim)
+    
+    def click_envent(event, x, y, flags, params):
+        if event == cv2.EVENT_LBUTTONDOWN:
+            print(x, y)
+            controller.set_target_position(np.array([x, y]))
+            cv2.destroyAllWindows()
+            ##positions.append(np.array([x, y]))
+
+    cv2.imshow("img", frame.copy())
+    cv2.setMouseCallback("img", click_envent)
+    key = cv2.waitKey(0)
+
     while True:
         frame = video_getter.frame
         # frame = detect_red(frame)
@@ -227,21 +245,11 @@ def apriltag_detector_procedure(
         result = detect(frame)
         if len(result) > 0:
             if first_time:
-
-                def click_envent(event, x, y, flags, params):
-                    if event == cv2.EVENT_LBUTTONDOWN:
-                        print(x, y)
-                        controller.set_target((x, y))
-                        cv2.destroyAllWindows(np.array([x, y]))
-                        positions.append()
-
-                cv2.imshow("img", frame.copy())
-                cv2.setMouseCallback("img", click_envent)
                 first_time = False
                 continue
 
             x, y = result[0].center
-            theta = angle(result[0])
+            #theta = angle(result[0])
 
             current_position[:] = [x, y]
             controller.set_current_position(current_position)
@@ -250,7 +258,7 @@ def apriltag_detector_procedure(
 
             interval = time.time() - prev_time
             speed = (result[0].center - prev_point) / interval
-            current_position += np.int64(speed * interval)
+            current_position += np.int64(speed * interval*100)
             controller.set_predicted_position(current_position)
             controller.PID_controller_update()
             prev_time = time.time()
@@ -344,7 +352,7 @@ class PID:
             targetAngle = 0
 
         temp_error = targetAngle - velocityAngle
-        if self.error > math.pi or (self.error < 0 and self.error > -math.pi):
+        if self.error > math.pi:
             # turn right - left faster
             temp_error = -abs(temp_error)
         else:
