@@ -3,6 +3,7 @@
 #include <ArduinoMqttClient.h>
 #include <WiFiNINA.h>
 #include "utility/Adafruit_MS_PWMServoDriver.h"
+#include <servo.h>
 
 ///////please enter your sensitive data in the Secret tab/arduino_secrets.h
 char ssid[] = "DESKTOP-E1TS9EK_1488";        // your network SSID (name)
@@ -28,8 +29,11 @@ Adafruit_DCMotor *m2 = AFMS.getMotor(2); //right
 // pins
 int left_line_follower = 0;
 int right_line_follower = 1;
+int servo_vertical_pin = 9;
+int servo_horizontal_pin = 10;
 
 int status_check = 0; //set to 0 at start set to 1 during line following
+
 
 int speed;
 String speed_str;
@@ -46,6 +50,14 @@ void setup() {
    if (!AFMS.begin()) {
     while (1);
   }
+
+  // SERVO SETUP
+
+  Servo servo_vertical;
+  Servo servo_horizontal;
+
+  servo_horizontal.attach(servo_horizontal_pin);
+  servo_vertical.attach(servo_vertical_pin);
 
   Serial.print("Attempting to connect to SSID: ");
   Serial.println(ssid);
@@ -104,6 +116,27 @@ void loop() {
   // put your main code here, to run repeatedly:
   start();
   line_follower();
+}
+
+// CLAW CONTROLLING FUNCTIONS:
+// TODO: Need to ask Chris for the actual angles required
+
+void raise_claw(){
+  servo_vertical.write(0);
+}
+
+void lower_claw(){
+  servo_vertical.write(270);
+}
+
+void close_claw(){
+  // close the lower section of the claw (grab the block)
+  servo_horizontal.write(0);
+}
+
+void open_claw(){
+  // open the lower section of the claw (release the block)
+  servo_horizontal.write(270);
 }
 
 void line_follower(){
