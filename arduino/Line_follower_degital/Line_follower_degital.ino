@@ -3,6 +3,7 @@
 #include <ArduinoMqttClient.h>
 #include <WiFiNINA.h>
 #include "utility/Adafruit_MS_PWMServoDriver.h"
+#include <servo.h>
 
 ///////please enter your sensitive data in the Secret tab/arduino_secrets.h
 char ssid[] = "DESKTOP-E1TS9EK_1488";        // your network SSID (name)
