@@ -3,7 +3,7 @@
 #include <ArduinoMqttClient.h>
 #include <WiFiNINA.h>
 #include "utility/Adafruit_MS_PWMServoDriver.h"
-#include <servo.h>
+#include <HCSR04.h>
 
 ///////please enter your sensitive data in the Secret tab/arduino_secrets.h
 char ssid[] = "DESKTOP-E1TS9EK_1488";        // your network SSID (name)
@@ -29,11 +29,9 @@ Adafruit_DCMotor *m2 = AFMS.getMotor(2); //right
 // pins
 int left_line_follower = 0;
 int right_line_follower = 1;
-int servo_vertical_pin = 9;
-int servo_horizontal_pin = 10;
-
-int status_check = 0; //set to 0 at start set to 1 during line following
-
+int left_outer_follower = 2;
+int right_outer_follower = 3;
+int status_check = 0; //set to 0 at start set to 1 during line following set to 2 after picking up block
 
 int speed;
 String speed_str;
@@ -44,20 +42,14 @@ const int echoPin = 10;
 long duration;
 int distance;
 
+UltraSonicDistanceSensor distancesensor(trigPin, echoPin);
+
 void setup() {
   // put your setup code here, to run once:
 
    if (!AFMS.begin()) {
     while (1);
   }
-
-  // SERVO SETUP
-
-  Servo servo_vertical;
-  Servo servo_horizontal;
-
-  servo_horizontal.attach(servo_horizontal_pin);
-  servo_vertical.attach(servo_vertical_pin);
 
   Serial.print("Attempting to connect to SSID: ");
   Serial.println(ssid);
@@ -105,7 +97,11 @@ void setup() {
   Serial.println();
   pinMode(trigPin, OUTPUT); // Sets the trigPin as an Output
   pinMode(echoPin, INPUT); // Sets the echoPin as an Input
-  
+
+  pinMode(0, INPUT); 
+  pinMode(1, INPUT);
+  pinMode(2, INPUT); 
+  pinMode(3, INPUT); 
 }
 
 void loop() {
@@ -114,33 +110,12 @@ void loop() {
     mqttClient.poll();
   }
   // put your main code here, to run repeatedly:
-  start();
+  //servo_start();
+  //start();
   line_follower();
 }
 
-// CLAW CONTROLLING FUNCTIONS:
-// TODO: Need to ask Chris for the actual angles required
-
-void raise_claw(){
-  servo_vertical.write(0);
-}
-
-void lower_claw(){
-  servo_vertical.write(270);
-}
-
-void close_claw(){
-  // close the lower section of the claw (grab the block)
-  servo_horizontal.write(0);
-}
-
-void open_claw(){
-  // open the lower section of the claw (release the block)
-  servo_horizontal.write(270);
-}
-
 void line_follower(){
-  mqttClient.poll();
   m1->run(FORWARD);
   m2->run(FORWARD);
   int error = 0; //error - turn left is +ve ,  turn right is -ve
@@ -150,31 +125,23 @@ void line_follower(){
   const float k_i = 0.001;
   const float k_p = 30;
   const float k_d = 10;
+  int outerlines_passed = 0;
   while(true){
-    
-    if(digitalRead(left_line_follower) &&  ! digitalRead(right_line_follower)) // Turn left - right wheel faster
+    mqttClient.poll();
+    if(digitalRead(left_line_follower) == 1 &&  digitalRead(right_line_follower) == 0) // Turn left - right wheel faster
     {
       error = 5;
     }
-    if(!digitalRead(left_line_follower) &&  digitalRead(right_line_follower)) // turn right - left wheel faster
+    if(digitalRead(left_line_follower) == 0 &&  digitalRead(right_line_follower) == 1) // turn right - left wheel faster
     {
       error = -5;
     }
-    if(!digitalRead(left_line_follower) &&  !digitalRead(right_line_follower)) // ultrasound
+    if(digitalRead(left_line_follower) == 0 &&  digitalRead(right_line_follower) == 0) // ultrasound
     {
-      if(status_check == 1) {
-        digitalWrite(trigPin, LOW);
-        delayMicroseconds(2);
-        // Sets the trigPin on HIGH state for 10 micro seconds
-        digitalWrite(trigPin, HIGH);
-        delayMicroseconds(10);
-        digitalWrite(trigPin, LOW);
-        // Reads the echoPin, returns the sound wave travel time in microseconds
-        duration = pulseIn(echoPin, HIGH);
-        // Calculating the distance
-        distance = duration * 0.034 / 2;
-        // Prints the distance IN CM
-        //error = reference - distance;
+      if(status_check == 2) {
+        double distance = distancesensor.measureDistanceCm();
+        delay(50);
+        error = (int)(distance - 5.85);
       }
       else {
         error = last_error;
@@ -186,9 +153,15 @@ void line_follower(){
         }
       }
     }
-    if(digitalRead(left_line_follower)  &&  digitalRead(right_line_follower)) // both on line no error
+    if(digitalRead(left_line_follower) == 1  &&  digitalRead(right_line_follower) == 1) // both on line no error
     {
       error = 0;
+      if(digitalRead(left_outer_follower) || digitalRead(right_outer_follower)){
+        outerlines_passed = outerlines_passed + 1;
+        if(outerlines_passed == 3){
+          status_check = 2;
+        }
+      }
     }
     I = I + error;
     int D = error - last_error;
@@ -200,23 +173,13 @@ void line_follower(){
     
     if(leftspeed < 0 || leftspeed > 255 || rightspeed < 0 || rightspeed > 255){
       if(leftspeed < 0){
-        m1->run(BACKWARD);
-        if(leftspeed > -255){
-          m1->setSpeed(-leftspeed);
-        } else {
-          m1->setSpeed(255);
-        }
+        m1->setSpeed(0);
       } else {
         m1->run(FORWARD);
         m1->setSpeed(255);
       }
       if(rightspeed < 0){
-        m2->run(BACKWARD);
-        if(rightspeed > -255){
-          m2->setSpeed(-rightspeed);
-        } else {
-          m2->setSpeed(255);
-        }
+        m2->setSpeed(0);
       } else {
         m2->run(FORWARD);
         m2->setSpeed(255);
@@ -283,10 +246,16 @@ void start(){
   m1->run(FORWARD);
   m2->run(FORWARD);
   m1->setSpeed(254);
-  m2->setSpeed(170);
-  delay(100);
-  while(digitalRead(left_line_follower)  ||  digitalRead(right_line_follower)){
+  m2->setSpeed(210);
+  delay(1000);
+  while(!digitalRead(left_line_follower)  &&  !digitalRead(right_line_follower)){
     int i = 0;
   }
   status_check = 1;
+  line_follower();
+  
+}
+
+void servo_start(){
+  
 }
