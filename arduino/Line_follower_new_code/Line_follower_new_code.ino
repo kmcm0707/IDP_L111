@@ -87,13 +87,23 @@ void line_follower(){
     
     if(leftspeed < 0 || leftspeed > 255 || rightspeed < 0 || rightspeed > 255){
       if(leftspeed < 0){
-        m1->setSpeed(0);
+        m1->run(BACKWARD);
+        if(leftspeed > -255){
+          m1->setSpeed(-leftspeed);
+        } else {
+          m1->setSpeed(255);
+        }
       } else if(leftspeed > 255) {
         m1->run(FORWARD);
         m1->setSpeed(255);
       }
       if(rightspeed < 0){
-        m2->setSpeed(0);
+        m2->run(BACKWARD);
+        if(leftspeed > -255){
+          m2->setSpeed(-rightspeed);
+        } else {
+          m2->setSpeed(255);
+        }
       } else {
         m2->run(FORWARD);
         m2->setSpeed(255);
