@@ -43,8 +43,6 @@ if "pupil_apriltags" not in sys.modules and "apriltag" not in sys.modules:
 
     raise ModuleNotFoundError("neither apriltag detection module installed")
 
-rightspeed = 0
-leftspeed = 0
 
 # mqttBroker = "broker.hivemq.com"
 # Alternative message brokers:
@@ -315,8 +313,8 @@ class PID:
         self.prev_error = 0
         self.integral = 0
         self.error = 0
-        self.left_speed = 200
-        self.right_speed = 200
+        self.left_speed = 170
+        self.right_speed = 170
         self.current_position = np.array([0, 0])
         self.target_position = np.array([0, 0])
         self.predicted_position = np.array([0, 0])
@@ -338,7 +336,7 @@ class PID:
         self.predicted_position[:] = predicted_position
 
     def PID_controller_update(self):
-        basespeed = 200
+        basespeed = 170
         """This function will return the error for the PID controller"""
         deltaX = self.current_position[0] - self.predicted_position[0]
         deltaY = self.current_position[1] - self.predicted_position[1]
@@ -352,8 +350,8 @@ class PID:
             velocityAngle = 0
             targetAngle = 0
 
-        temp_error = abs(targetAngle - velocityAngle)
-        if temp_error > math.pi:
+        temp_error = targetAngle - velocityAngle
+        if temp_error > math.pi or (temp_error < 0 and temp_error > -math.pi):
             # turn right - left faster
             temp_error = -abs(temp_error)
         else:
