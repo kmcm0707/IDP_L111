@@ -7,8 +7,8 @@ Adafruit_MotorShield AFMS = Adafruit_MotorShield();
 Adafruit_DCMotor *m1 = AFMS.getMotor(1); //left
 Adafruit_DCMotor *m2 = AFMS.getMotor(2); //right    
 
-int left_line_follower = A0;
-int right_line_follower = A1;
+int left_line_follower = 0;
+int right_line_follower = 1;
 
 int linefollower_trigger = 500;
 int status_check = 0; //set to 1 after blocks picked up
@@ -33,20 +33,20 @@ void line_follower(){
   int error = 0; //error - turn left is +ve ,  turn right is -ve
   int last_error = 0;
   int I = 0;
-  int basespeed = 200;
-  const float k_i = 0.001;
+  int basespeed = 180;
+  const float k_i = 0.0001;
   const float k_p = 30;
   const float k_d = 10;
   while(true){
-    if(analogRead(left_line_follower) > linefollower_trigger &&  analogRead(right_line_follower) < linefollower_trigger) // Turn left - right wheel faster
+    if(digitalRead(left_line_follower) &&  !digitalRead(right_line_follower)) // Turn left - right wheel faster
     {
       error = 5;
     }
-    if(analogRead(left_line_follower) < linefollower_trigger &&  analogRead(right_line_follower) > linefollower_trigger) // turn right - left wheel faster
+    if(!digitalRead(left_line_follower) &&  digitalRead(right_line_follower)) // turn right - left wheel faster
     {
       error = -5;
     }
-    if(analogRead(left_line_follower) < linefollower_trigger &&  analogRead(right_line_follower) < linefollower_trigger) // ultrasound
+    if(!digitalRead(left_line_follower) &&  !digitalRead(right_line_follower)) // ultrasound
     {
       if(status_check == 1) {
         /*digitalWrite(trigPin, LOW);
@@ -73,7 +73,7 @@ void line_follower(){
         }
       }
     }
-    if(analogRead(left_line_follower) > linefollower_trigger &&  analogRead(right_line_follower) > linefollower_trigger) // turn right - left wheel faster
+    if(digitalRead(left_line_follower) &&  digitalRead(right_line_follower)) // turn right - left wheel faster
     {
       error = 0;
     }
@@ -87,23 +87,13 @@ void line_follower(){
     
     if(leftspeed < 0 || leftspeed > 255 || rightspeed < 0 || rightspeed > 255){
       if(leftspeed < 0){
-        m1->run(BACKWARD);
-        if(leftspeed > -255){
-          m1->setSpeed(-leftspeed);
-        } else {
-          m1->setSpeed(255);
-        }
-      } else {
+        m1->setSpeed(0);
+      } else if(leftspeed > 255) {
         m1->run(FORWARD);
         m1->setSpeed(255);
       }
       if(rightspeed < 0){
-        m2->run(BACKWARD);
-        if(rightspeed > -255){
-          m2->setSpeed(-rightspeed);
-        } else {
-          m2->setSpeed(255);
-        }
+        m2->setSpeed(0);
       } else {
         m2->run(FORWARD);
         m2->setSpeed(255);
