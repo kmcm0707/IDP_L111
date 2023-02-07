@@ -3,6 +3,7 @@
 #include <ArduinoMqttClient.h>
 #include <WiFiNINA.h>
 #include "utility/Adafruit_MS_PWMServoDriver.h"
+#include <servo.h>
 
 ///////please enter your sensitive data in the Secret tab/arduino_secrets.h
 char ssid[] = "DESKTOP-E1TS9EK_1488";        // your network SSID (name)
@@ -28,11 +29,20 @@ Adafruit_DCMotor *m2 = AFMS.getMotor(2); //right
 // pins
 int left_line_follower = 0;
 int right_line_follower = 1;
+int servo_vertical_pin = 9;
+int servo_horizontal_pin = 10;
 
-int status_check = 0; //set to 1 after blocks picked up
+int status_check = 0; //set to 0 at start set to 1 during line following
+
 
 int speed;
 String speed_str;
+
+// defines pins numbers
+const int trigPin = 9;
+const int echoPin = 10;
+long duration;
+int distance;
 
 void setup() {
   // put your setup code here, to run once:
@@ -40,6 +50,14 @@ void setup() {
    if (!AFMS.begin()) {
     while (1);
   }
+
+  // SERVO SETUP
+
+  Servo servo_vertical;
+  Servo servo_horizontal;
+
+  servo_horizontal.attach(servo_horizontal_pin);
+  servo_vertical.attach(servo_vertical_pin);
 
   Serial.print("Attempting to connect to SSID: ");
   Serial.println(ssid);
@@ -85,6 +103,8 @@ void setup() {
   Serial.println(topic2);
 
   Serial.println();
+  pinMode(trigPin, OUTPUT); // Sets the trigPin as an Output
+  pinMode(echoPin, INPUT); // Sets the echoPin as an Input
   
 }
 
@@ -94,10 +114,33 @@ void loop() {
     mqttClient.poll();
   }
   // put your main code here, to run repeatedly:
+  start();
   line_follower();
 }
 
+// CLAW CONTROLLING FUNCTIONS:
+// TODO: Need to ask Chris for the actual angles required
+
+void raise_claw(){
+  servo_vertical.write(0);
+}
+
+void lower_claw(){
+  servo_vertical.write(270);
+}
+
+void close_claw(){
+  // close the lower section of the claw (grab the block)
+  servo_horizontal.write(0);
+}
+
+void open_claw(){
+  // open the lower section of the claw (release the block)
+  servo_horizontal.write(270);
+}
+
 void line_follower(){
+  mqttClient.poll();
   m1->run(FORWARD);
   m2->run(FORWARD);
   int error = 0; //error - turn left is +ve ,  turn right is -ve
@@ -120,7 +163,7 @@ void line_follower(){
     if(!digitalRead(left_line_follower) &&  !digitalRead(right_line_follower)) // ultrasound
     {
       if(status_check == 1) {
-        /*digitalWrite(trigPin, LOW);
+        digitalWrite(trigPin, LOW);
         delayMicroseconds(2);
         // Sets the trigPin on HIGH state for 10 micro seconds
         digitalWrite(trigPin, HIGH);
@@ -132,7 +175,6 @@ void line_follower(){
         distance = duration * 0.034 / 2;
         // Prints the distance IN CM
         //error = reference - distance;
-        */
       }
       else {
         error = last_error;
@@ -144,7 +186,7 @@ void line_follower(){
         }
       }
     }
-    if(digitalRead(left_line_follower)  &&  digitalRead(right_line_follower)) // turn right - left wheel faster
+    if(digitalRead(left_line_follower)  &&  digitalRead(right_line_follower)) // both on line no error
     {
       error = 0;
     }
@@ -235,4 +277,16 @@ void onMqttMessage(int messageSize) {
   
   Serial.println();
   Serial.println();
+}
+
+void start(){
+  m1->run(FORWARD);
+  m2->run(FORWARD);
+  m1->setSpeed(254);
+  m2->setSpeed(170);
+  delay(100);
+  while(digitalRead(left_line_follower)  ||  digitalRead(right_line_follower)){
+    int i = 0;
+  }
+  status_check = 1;
 }
