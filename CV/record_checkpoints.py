@@ -1,6 +1,12 @@
+#!../env/bin/python
+# coding: utf-8
+# python 3.9.16
+
 import cv2
 import numpy as np
 import time
+import apriltag
+import numba
 
 
 def load_vals(num=2):
@@ -26,20 +32,15 @@ def get_points(img):
             cv2.circle(img, (x, y), 2, (0, 0, 255), -1)
             points.append((x, y))
 
-        if event == cv2.EVENT_RBUTTONDOWN:
-            cv2.destroyAllWindows()
-            print(points)
-
     cv2.imshow("img", img)
     cv2.setMouseCallback("img", click_envent)
     cv2.waitKey()
-    points = np.float32(points)
+    cv2.destroyAllWindows()
+    points = np.int32(points)
     return points
 
 
 def click_on_checkpoints(src) -> None:
-
-    mtx, dist, newcameramtx = load_vals(6)
 
     video = cv2.VideoCapture(src)
     time.sleep(2)
@@ -48,19 +49,77 @@ def click_on_checkpoints(src) -> None:
         print("error with video feed")
         return -1
 
+    mtx, dist, newcameramtx = load_vals(6)
     frame = cv2.undistort(frame, mtx, dist, None, newcameramtx)
 
     dim = (810, 810)
     print("click on the corners of the table")
-    points = get_points(frame, dim)
+    points = get_points(frame)
     if len(points) != 4:
         print("error with points")
         return -1
 
     new_points = np.float32([(0, 0), (0, dim[1]), (dim[0], 0), dim])
 
-    M = cv2.getPerspectiveTransform(points, new_points)
+    M = cv2.getPerspectiveTransform(points.astype("float32"), new_points)
     frame = cv2.warpPerspective(frame, M, dim)
-    checkpoints = get_points(frame, dim)
+    checkpoints = get_points(frame)
     print(checkpoints)
     video.release()
+    return checkpoints, M
+
+
+@numba.njit
+def chech_if_checkpoint(checkpoints, point, r_sqrd=50):
+
+    np.sum(np.square(checkpoints - point), keepdims=True, axis=1)
+    return np.sum(np.square(checkpoints - point), keepdims=True, axis=1) < r_sqrd
+
+
+def main():
+    src = "http://localhost:8081/stream/video.mjpeg"
+    src = 0
+    # checkpoints, M = click_on_checkpoints(src)
+
+    # mtc, dist, newcameramtx = load_vals(6)
+    video = cv2.VideoCapture(src)
+    time.sleep(2)
+
+    ret, frame = video.read()
+    if not ret:
+        print("error with video feed")
+        return -1
+
+    checkpoints = get_points(frame)
+
+    mask = np.ones((810, 810), np.uint8)
+    for point in checkpoints:
+        cv2.circle(mask, point, 10, 0, -1)
+
+    option = apriltag.DetectorOptions(families="tag36h11")
+    detector = apriltag.Detector(option)
+
+    while True:
+        ret, frame = video.read()
+        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        if not ret:
+            print("error with video feed")
+            continue
+        # frame = cv2.undistort(frame, mtc, dist, None, newcameramtx)
+        # frame = cv2.warpPerspective(frame, M, (810, 810))
+        result = detector.detect(frame)
+        if len(result) > 0:
+            ##at_checkpoint, i = chech_if_checkpoint(checkpoints, result[0].center)
+            print(result[0].center)
+            """if at_checkpoint:
+                print(f"at checkpoint {i}")"""
+
+        # frame = cv2.bitwise_and(frame, frame, mask=mask)
+        cv2.imshow("frame", frame)
+        if cv2.waitKey(1) & 0xFF == ord("q"):
+            break
+
+
+if __name__ == "__main__":
+    # click_on_checkpoints("http://localhost:8081/stream/video.mjpeg")
+    main()
