@@ -476,10 +476,11 @@ def apriltag_detector_procedure(
         result = detect(frame)
         if len(result) > 0:
 
-            print(result)
+            # print(result)
 
             x, y = result[0].center
             theta = angle(result[0])
+            print("angle", theta)
             # if first_time:
             current_position = np.array([x, y])
             # first_time = False
