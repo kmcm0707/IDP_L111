@@ -42,11 +42,11 @@ void line_follower(){
     {
       error = 5;
     }
-    if(!digitalRead(left_line_follower) &&  digitalRead(right_line_follower)) // turn right - left wheel faster
+    else if(!digitalRead(left_line_follower) &&  digitalRead(right_line_follower)) // turn right - left wheel faster
     {
       error = -5;
     }
-    if(!digitalRead(left_line_follower) &&  !digitalRead(right_line_follower)) // ultrasound
+    else if(!digitalRead(left_line_follower) &&  !digitalRead(right_line_follower)) // ultrasound
     {
       if(status_check == 1) {
         /*digitalWrite(trigPin, LOW);
@@ -73,7 +73,7 @@ void line_follower(){
         }
       }
     }
-    if(digitalRead(left_line_follower) &&  digitalRead(right_line_follower)) // turn right - left wheel faster
+    else if(digitalRead(left_line_follower) &&  digitalRead(right_line_follower)) // turn right - left wheel faster
     {
       error = 0;
     }
@@ -93,18 +93,18 @@ void line_follower(){
         } else {
           m1->setSpeed(255);
         }
-      } else if(leftspeed > 255) {
+      } else {
         m1->run(FORWARD);
         m1->setSpeed(255);
       }
       if(rightspeed < 0){
         m2->run(BACKWARD);
-        if(leftspeed > -255){
+        if(rightspeed > -255){
           m2->setSpeed(-rightspeed);
         } else {
           m2->setSpeed(255);
         }
-      } else {
+      } else{
         m2->run(FORWARD);
         m2->setSpeed(255);
       }
