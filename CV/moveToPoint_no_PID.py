@@ -55,7 +55,7 @@ client = mqtt.Client("Python")
 client.connect(mqttBroker)
 
 global target
-
+global targets
 
 class VideoGet:
     """
@@ -339,14 +339,19 @@ def apriltag_detector_procedure(
     if fix_perspective:
         frame = cv2.warpPerspective(frame, M, dim)
     global target
+    global targets
     target = None
-
+    targets = np.array()
     def click_envent(event, x, y, flags, params):
-        if event == cv2.EVENT_LBUTTONDOWN:
-            global target
-            print(x, y)
-            target = np.array([x, y])
-            cv2.destroyAllWindows()
+        while targets.size < 4:
+            if event == cv2.EVENT_LBUTTONDOWN:
+                global target
+                global targets
+                print(x, y)
+                target = np.array([x, y])
+                targets = np.append(target)
+    
+        cv2.destroyAllWindows()
 
     cv2.imshow("img", frame.copy())
     cv2.setMouseCallback("img", click_envent)
@@ -360,6 +365,8 @@ def apriltag_detector_procedure(
     # current_position = np.array([0, 0])
     moving_forward = False
     clockwise = True
+    target = targets[0]
+    current_target = 0
     while True:
         frame = video_getter.frame
         # frame = detect_red(frame)
@@ -396,7 +403,11 @@ def apriltag_detector_procedure(
                 client.publish("IDP_2023_Follower_left_speed", 0)
                 client.publish("IDP_2023_Follower_right_speed", 0)
                 print("done")
-                break
+                if current_target == 3:
+                    video_getter.stop()
+                    break
+                current_target += 1
+                target = targets[current_target]
 
             if abs(angle_diff) < 0.2:
                 if not moving_forward:
@@ -411,17 +422,19 @@ def apriltag_detector_procedure(
                 ) - (heading[1] - np.float64(current_position[1])) * (
                     v[0] - np.float64(current_position[0])
                 ) > 0:
-                    if not clockwise:
+                    if not clockwise or moving_forward:
                         client.publish("IDP_2023_Follower_left_speed", -100)
                         client.publish("IDP_2023_Follower_right_speed", 100)
                         clockwise = True
+                        moving_forward = False
                         print("clockwise")
                 else:
-                    if clockwise:
+                    if clockwise or moving_forward:
                         client.publish("IDP_2023_Follower_left_speed", 100)
                         client.publish("IDP_2023_Follower_right_speed", -100)
                         print("anticlockwise")
                         clockwise = False
+                        moving_forward = False
 
                 """if angle_diff > 0:
                     client.publish("IDP_2023_Follower_left_speed", -100)
