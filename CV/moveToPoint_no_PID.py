@@ -356,6 +356,7 @@ def apriltag_detector_procedure(
     cv2.imshow("img", frame.copy())
     cv2.setMouseCallback("img", click_envent)
     key = cv2.waitKey(0)
+    position_red = detect_red_video(frame)
     print("hello")
 
     frame_counter = 0
@@ -493,6 +494,53 @@ def main():
         apriltag_detector_procedure(
             "http://localhost:8081/stream/video.mjpeg", module=apriltag
         )
+
+def detect_red_video(frame):
+    "detecting red cube in video and draws rectangle around it"
+
+
+    # conveting from RGB to HSV
+    hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+
+    # red threshold values
+    lower_red = np.array([120, 70, 80])
+    upper_red = np.array([180, 255, 255])
+
+    # one is ranges shows up white and else in black
+    mask = cv2.inRange(hsv, lower_red, upper_red)
+
+    # noise reduction
+    kernel = np.ones((7, 7), np.uint8)
+    mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
+    mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
+
+    # finding contours
+    contours, hierarchy = cv2.findContours(
+        mask.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
+    )
+
+    # drawing rectangles
+    centres = []
+    for cont in contours:
+        if cv2.contourArea(cont) <= 50:
+            continue
+        x, y, w, h = cv2.boundingRect(cont)
+
+        centres.append((x, y, w, h))
+
+    dim = frame.shape
+    half = dim[1] * 0.5
+    for x, y, w, h in centres:
+        if (x < half) and (x > 180):
+            cv2.rectangle(frame, (x, y), (x + w, y + h), (255, 0, 0))
+
+    # showing the feed with rectangles
+    cv2.imshow("frame", frame)
+    # for stopping the window wont run without it
+    # see file docstring for detail
+    key = cv2.waitKey()
+    if key == ord("q"):
+        return (x + w/2, y + h/2)
 
 
 if __name__ == "__main__":
