@@ -279,6 +279,7 @@ def apriltag_detector_procedure(
     cv2.setMouseCallback("img", click_envent)
     key = cv2.waitKey(0)
     position_red = detect_red_video(frame)
+    targets.insert(2, position_red)
     print("hello")
 
     frame_counter = 0
@@ -335,6 +336,8 @@ def apriltag_detector_procedure(
                 client.publish("IDP_2023_Follower_left_speed", 0)
                 client.publish("IDP_2023_Follower_right_speed", 0)
                 print("done")
+                if(current_target == 2):
+                    client.publish("IDP_2023_Servo", 0)
                 if current_target == 3:
                     video_getter.stop()
                     break
