@@ -575,6 +575,7 @@ def PID_controller(
 
 
 if __name__ == "__main__":
+    """
     # apriltag_detector_procedure(0, fix_distortion=False, fix_perspective=False)
     if platform == "darwin":
         # os.system("python " + "../server/app.py &")
@@ -593,7 +594,7 @@ if __name__ == "__main__":
             "http://localhost:8081/stream/video.mjpeg",
             module=pupil_apriltags,
         )
-
+    """
     # For lines
     """for i in range(1, 9):
     img = cv2.imread(f"calib_imgs/test_imgs/{i}.png")
@@ -611,11 +612,11 @@ if __name__ == "__main__":
         cv2.waitKey(0)"""
 
     # this tries to apply this object detection with camera
-    """video = cv2.VideoCapture(0)
+    video = cv2.VideoCapture(1)
 
     detect_red_video(video)
 
-    video.release()"""
+    video.release()
 
     # this code works for the mjpeg stream
     """stream = cv2.VideoCapture("http://localhost:8081/stream/video.mjpeg")
