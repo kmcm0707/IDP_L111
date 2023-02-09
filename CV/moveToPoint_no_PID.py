@@ -7,6 +7,7 @@
 
 import sys
 import time
+import math
 from threading import Thread
 import calibration_clean as cal
 import paho.mqtt.client as mqtt
@@ -233,7 +234,9 @@ def apriltag_detector_procedure(
             detect = detector.detect
 
             def angle(result):
-                v = result.corners[1] - result.corners[0]
+                v = (result.corners[1] + result.corners[0]) - (
+                    result.corners[3] + result.corners[2]
+                )
                 v = v / np.linalg.norm(v)
                 vertical = np.array([1, 0])
                 angle = np.arccos(np.dot(v, vertical))
@@ -278,8 +281,8 @@ def apriltag_detector_procedure(
     print("hello")
 
     frame_counter = 0
-    client.publish("IDP_2023_Follower_left_speed", -150)
-    client.publish("IDP_2023_Follower_right_speed", 150)
+    # client.publish("IDP_2023_Follower_left_speed", -150)
+    # client.publish("IDP_2023_Follower_right_speed", 150)
 
     # current_position = np.array([0, 0])
     moving_forward = False
@@ -310,23 +313,24 @@ def apriltag_detector_procedure(
                 continue
 
             current_position[:] = result[0].center
-            print("target", target)
-            print("current", current_position)
+            # print("target", target)
+            # print("current", current_position)
             heading = np.float64(target - current_position)
             heading /= np.linalg.norm(heading)
             v = np.float64(result[0].corners[1] - result[0].corners[0])
             cv2.circle(frame, np.int32(result[0].corners[3]), 10, (0, 0, 255), -1)
             cv2.circle(frame, np.int32(result[0].corners[0]), 10, (0, 255, 0))
-            cv2.imshow("img", frame)
+            cv2.polylines(frame, [np.int32(targets)], False, (0, 255, 0), 2)
+            """ cv2.imshow("img", frame)
             key = cv2.waitKey(1)
             if key == ord("q"):
-                break
+                break"""
             v /= np.linalg.norm(v)
             angle_diff = np.arccos(np.dot(v, heading))
 
-            print("angle diference: ", angle_diff)
+            # print("angle diference: ", angle_diff)
 
-            if np.linalg.norm(current_position - target) < 10:
+            if np.linalg.norm(current_position - target) < 35:
                 client.publish("IDP_2023_Follower_left_speed", 0)
                 client.publish("IDP_2023_Follower_right_speed", 0)
                 print("done")
@@ -339,28 +343,32 @@ def apriltag_detector_procedure(
                 anticlockwise = False
                 moving_forward = False
 
-            if abs(angle_diff) < 0.2:
+            if angle_diff < 0.2 or angle_diff > (2 * math.pi) - 0.2:
                 if not moving_forward or last_time - time.time() > 0.5:
                     client.publish("IDP_2023_Follower_left_speed", 250)
                     client.publish("IDP_2023_Follower_right_speed", 250)
                     moving_forward = True
                     last_time = time.time()
-                    print("\n\n\nforward\n\n\n")
+                    print("forward")
                     clockwise = False
                     anticlockwise = False
 
             else:
-                print(
+                """print(
                     "left or right :",
                     (current_position[0] - v[0]) * (target[1] - v[1])
                     - ((current_position[1] - v[1]) * (target[0] - v[0])),
-                )
+                )"""
                 if (
-                    (current_position[0] - v[0]) * (target[1] - v[1])
-                    - ((current_position[1] - v[1]) * (target[0] - v[0]))
+                    (np.float64(result[0].corners[1][0] - result[0].corners[0][0]))
+                    * (target[1] - result[0].corners[1][1])
+                    - (
+                        (np.float64(result[0].corners[1][1] - result[0].corners[0][1]))
+                        * (target[0] - result[0].corners[0][0])
+                    )
                 ) > 0:
                     print("clockwise")
-                    if not clockwise or last_time - time.time() > 0.5:
+                    if not clockwise or time.time() - last_time > 0.5:
                         client.publish("IDP_2023_Follower_left_speed", 150)
                         client.publish("IDP_2023_Follower_right_speed", -150)
                         clockwise = True
@@ -370,7 +378,7 @@ def apriltag_detector_procedure(
                         last_time = time.time()
                 else:
                     print("anticlockwise")
-                    if not anticlockwise or last_time - time.time() > 0.5:
+                    if not anticlockwise or time.time() - last_time > 0.5:
                         client.publish("IDP_2023_Follower_left_speed", -150)
                         client.publish("IDP_2023_Follower_right_speed", 150)
                         print("\n\n\nanticlockwise\n\n\n")

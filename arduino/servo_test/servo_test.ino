@@ -34,11 +34,12 @@ void loop() {
   Serial.write(servo_horizontal.read());
   Serial.write('\n');
 
-  lower_claw();
   close_claw();
-  delay(5000);
-  open_claw();
+  // open_claw();
   raise_claw();
+  delay(5000);
+  lower_claw();
+  open_claw();
   delay(5000);
 }
 
