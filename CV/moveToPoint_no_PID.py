@@ -112,7 +112,7 @@ class VideoShow:
 def perspective_transoformation(img, dim):
     """function for manual perspective transformation of an image
     returns the transformation matrix"""
-    points = []
+    """points = []
 
     def click_envent(event, x, y, flags, params):
         if event == cv2.EVENT_LBUTTONDOWN:
@@ -125,8 +125,9 @@ def perspective_transoformation(img, dim):
 
     cv2.imshow("img", img)
     cv2.setMouseCallback("img", click_envent)
-    key = cv2.waitKey()
-    points = np.float32(points)
+    key = cv2.waitKey()"""
+    points = np.float32([[261, 682], [818, 630], [236, 151], [738, 92]])
+    # points = np.float32(points)
     new_points = np.float32([(0, 0), (0, dim[1]), (dim[0], 0), dim])
 
     M = cv2.getPerspectiveTransform(points, new_points)
@@ -273,14 +274,14 @@ def apriltag_detector_procedure(
             print(x, y)
             target = np.array([x, y])
             targets.append(target)
-        if len(targets) >= 4:
+        if len(targets) >= 7:
             cv2.destroyAllWindows()
 
     cv2.imshow("img", frame.copy())
     cv2.setMouseCallback("img", click_envent)
     key = cv2.waitKey(0)
-    position_red = detect_red_video(frame_copy)
-    targets.insert(2, position_red)
+    # position_red = detect_red_video(frame_copy)
+    # targets.insert(2, position_red)
     print("hello")
 
     frame_counter = 0
@@ -344,9 +345,17 @@ def apriltag_detector_procedure(
                     client.publish("IDP_2023_Servo_Horizontal", 0)
                     time.sleep(5)
                 if current_target == 2:
+                    client.publish("IDP_2023_Servo_Vertical", 1)
                     client.publish("IDP_2023_Servo_Horizontal", 1)
                     time.sleep(5)
-                if current_target == 3:
+                if current_target == 5:
+                    client.publish("IDP_2023_Servo_Vertical", 1)
+                    client.publish("IDP_2023_Follower_left_speed", -250)
+                    client.publish("IDP_2023_Follower_right_speed", -250)
+                    time.sleep(4)
+                    client.publish("IDP_2023_Follower_left_speed", 0)
+                    client.publish("IDP_2023_Follower_right_speed", 0)
+                if current_target == 6:
                     video_getter.stop()
                     break
                 current_target += 1
@@ -419,18 +428,14 @@ def main():
     if platform == "win32":
         # Windows
         apriltag_detector_procedure(
-            # "http://localhost:8081/stream/video.mjpeg",
-            1,
+            "http://localhost:8081/stream/video.mjpeg",
             module=pupil_apriltags,
         )
     else:
         # mac
         apriltag_detector_procedure(
-            # "http://localhost:8081/stream/video.mjpeg",
-            1,
+            "http://localhost:8081/stream/video.mjpeg",
             module=apriltag,
-            fix_distortion=False,
-            fix_perspective=False,
         )
 
 
