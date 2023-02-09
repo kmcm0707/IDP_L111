@@ -12,7 +12,7 @@ int servo_horizontal_pin = 10;
 
 int vertical_angle_high = 125; //120?
 int vertical_angle_low = 25;
-int horizontal_angle_high = 90; //95?
+int horizontal_angle_high = 85; //95?
 int horizontal_angle_low = 0;
 
 Servo servo_vertical;

@@ -1,13 +1,16 @@
 #include <ArduinoMqttClient.h>
 #include <WiFiNINA.h>
 #include <Adafruit_MotorShield.h>
+#include <Servo.h>
 // #include "arduino_secrets.h"
 
 ///////please enter your sensitive data in the Secret tab/arduino_secrets.h
 // char ssid[] = "qwertyuiop";        // your network SSID (name)
 // char pass[] = "asdfghjkl";     // your network password
-char ssid[] = "DevPhone";        // your network SSID (name)
-char pass[] = "jyugemujyugemu";     // your network password
+// char ssid[] = "DevPhone";        // your network SSID (name)
+// char pass[] = "jyugemujyugemu";     // your network password
+char ssid[] = "DESKTOP-E1TS9EK_1488";        // your network SSID (name)
+char pass[] = "46X)i457";  
 
 WiFiClient wifiClient;
 MqttClient mqttClient(wifiClient);
@@ -16,7 +19,21 @@ const char broker[] = "test.mosquitto.org";
 int        port     = 1883;
 String topic  = "IDP_2023_Follower_left_speed";
 String topic2  = "IDP_2023_Follower_right_speed";
+
+String vert_servo = "IDP_2023_Servo_Vertical";
+String hori_servo = "IDP_2023_Servo_Horizontal";
 //const char topic3[]  = "real_unique_topic_3";
+
+int servo_vertical_pin = 9;
+int servo_horizontal_pin = 10;
+
+int vertical_angle_high = 125; //120?
+int vertical_angle_low = 25;
+int horizontal_angle_high =  80; //95?44wwws wqswswz
+int horizontal_angle_low = 30;
+
+Servo servo_vertical;
+Servo servo_horizontal;
 
 String current_topic;
 
@@ -38,6 +55,10 @@ void setup() {
   if (!AFMS.begin()) {
     while (1);
   }
+
+  servo_horizontal.attach(servo_horizontal_pin);
+  servo_vertical.attach(servo_vertical_pin);
+
   // attempt to connect to Wifi network:
   Serial.print("Attempting to connect to SSID: ");
   Serial.println(ssid);
@@ -78,6 +99,9 @@ void setup() {
   // subscribe to a topic
   mqttClient.subscribe(topic);
   mqttClient.subscribe(topic2);
+  mqttClient.subscribe(vert_servo);
+  mqttClient.subscribe(hori_servo);
+
   // mqttClient.subscribe(topic3);
 
   // topics can be unsubscribed using:
@@ -159,6 +183,44 @@ void onMqttMessage(int messageSize) {
       m2->setSpeed(speed);
     }
     
+  }
+
+  if (current_topic == vert_servo){
+     servo_vertical.attach(servo_vertical_pin);
+    if (speed == 1){
+      // From arduino 'servo' example:
+      for (int pos = vertical_angle_low; pos <= vertical_angle_high; pos += 1) {
+      // in steps of 1 degree
+      servo_vertical.write(pos);              // tell servo to go to position in variable 'pos'
+      delay(15);
+      }                             // waits 15 ms for the servo to reach the position
+    } else{
+      // From arduino 'servo' example:
+      for (int pos = vertical_angle_high; pos >= vertical_angle_low; pos -= 1) {
+      // in steps of 1 degree
+      servo_vertical.write(pos);              // tell servo to go to position in variable 'pos'
+      delay(15);                                // waits 15 ms for the servo to reach the position
+      }
+    }
+    servo_vertical.detach();
+  }
+
+  if (current_topic == hori_servo){
+    servo_vertical.attach(servo_horizontal_pin);
+    if(speed == 1){
+      for (int pos = horizontal_angle_low; pos <= horizontal_angle_high; pos += 1) {
+      // in steps of 1 degree
+      servo_horizontal.write(pos);              // tell servo to go to position in variable 'pos'
+      delay(15);                                // waits 15 ms for the servo to reach the position
+
+      }
+    } else {
+      for (int pos = horizontal_angle_high; pos >= horizontal_angle_low; pos -= 1) {
+      // in steps of 1 degree
+      servo_horizontal.write(pos);              // tell servo to go to position in variable 'pos'
+      delay(15);                                // waits 15 ms for the servo to reach the position
+      }
+    }
   }
   
   Serial.println();

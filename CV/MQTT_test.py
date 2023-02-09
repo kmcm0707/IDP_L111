@@ -89,6 +89,22 @@ def anticlockwise_rotate():
     client.publish("IDP_2023_Follower_right_speed", "211")
 
 
+def down():
+    client.publish("IDP_2023_Servo_Vertical", 0)
+
+
+def up():
+    client.publish("IDP_2023_Servo_Vertical", 1)
+
+
+def close():
+    client.publish("IDP_2023_Servo_Horizontal", 1)
+
+
+def open():
+    client.publish("IDP_2023_Servo_Horizontal", 0)
+
+
 # insert keyboard code here with thread of video get
 
 # use these for the speed
@@ -137,6 +153,15 @@ while True:
 
     elif key == ord("s"):
         stop()
+
+    elif key == ord("1"):
+        up()
+    elif key == ord("2"):
+        down()
+    elif key == ord("3"):
+        close()
+    elif key == ord("4"):
+        open()
 
 video.stop()
 cv2.destroyAllWindows()
