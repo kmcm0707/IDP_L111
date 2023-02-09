@@ -78,7 +78,7 @@ def chech_if_checkpoint(checkpoints, point, r_sqrd=50):
 
 def main():
     src = "http://localhost:8081/stream/video.mjpeg"
-    src = 0
+    src = 1
     # checkpoints, M = click_on_checkpoints(src)
 
     # mtc, dist, newcameramtx = load_vals(6)

@@ -98,7 +98,10 @@ client.publish("IDP_2023_Follower_right_speed", "211")
 """img = cv2.imread("calib_imgs/img_dump_manual_table3_2/0.jpg")
 cv2.imshow("img", img)"""
 
-video = VideoGet("http://localhost:8081/stream/video.mjpeg").start()
+video = VideoGet(
+    # "http://localhost:8081/stream/video.mjpeg"
+    0
+).start()
 
 while True:
     img = video.frame

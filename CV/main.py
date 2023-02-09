@@ -580,8 +580,11 @@ if __name__ == "__main__":
         # os.system("python " + "../server/app.py &")
         # mac
         apriltag_detector_procedure(
-            "http://localhost:8081/stream/video.mjpeg",
+            #"http://localhost:8081/stream/video.mjpeg",
+            1,
             module=apriltag,
+            fix_distortion=False,
+            fix_perspective=False
         )
     elif platform == "win32":
         # Windows

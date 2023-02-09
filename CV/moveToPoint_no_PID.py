@@ -7,6 +7,7 @@
 
 import sys
 import time
+import math
 from threading import Thread
 import calibration_clean as cal
 import paho.mqtt.client as mqtt
@@ -56,6 +57,7 @@ client.connect(mqttBroker)
 
 global target
 global targets
+
 
 class VideoGet:
     """
@@ -129,89 +131,6 @@ def perspective_transoformation(img, dim):
 
     M = cv2.getPerspectiveTransform(points, new_points)
     return M
-
-
-def rotate(
-    video_getter,
-    M,
-    target,
-    current_position,
-    detector,
-    mtx,
-    dist,
-    newcameramtx,
-    dim,
-    current_head=None,
-    fix_distortion=True,
-    fix_perspective=True,
-):
-    v = target - current_position
-    v /= np.linalg.norm(v)
-    current_head /= np.linalg.norm(current_head)
-    angle_diff = np.artann2(np.dot(v, current_head))
-    if angle_diff < 0:
-        client.publish("IDP_2023_Follower_left_speed", -200)
-        client.publish("IDP_2023_Follower_right_speed", 200)
-    else:
-        client.publish("IDP_2023_Follower_left_speed", 200)
-        client.publish("IDP_2023_Follower_right_speed", -200)
-
-    while True:
-        frame = video_getter.frame
-        # frame = detect_red(frame)
-        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-
-        """if not ret:
-            print("no frame retereived; trying apain")
-            continue"""
-
-        if fix_distortion:
-            frame = cv2.undistort(frame, mtx, dist, None, newcameramtx)
-
-        if fix_perspective:
-            frame = cv2.warpPerspective(frame, M, dim)
-
-        result = detector(frame)
-        if len(result) > 0:
-            if first_time:
-                first_time = False
-                continue
-
-            current_position[:] = result[0].center
-            print("target", target)
-            print("current", current_position)
-            heading = np.float64(target - current_position)
-            heading /= np.linalg.norm(heading)
-            v = np.float64(result[0].corners[1] - result[0].corners[0])
-            v /= np.linalg.norm(v)
-            angle_diff = np.arccos(np.dot(v, heading))
-
-            print("angle: ", angle_diff)
-
-            prev_time = time.time()
-
-            prev_angle = angle_diff
-
-            if angle_diff < 0.1:
-                return
-
-            a, b, c, d = result[0].corners
-            print(current_position)
-            frame = cv2.circle(
-                frame,
-                current_position.astype("int32"),
-                radius=12,
-                color=(255, 255, 255),
-                thickness=-1,
-            )
-            frame = cv2.polylines(
-                frame, [np.int32(result[0].corners)], True, (255, 255, 255), 2
-            )
-
-        cv2.imshow("frame", frame)
-        key = cv2.waitKey(1)
-        if key == ord("q"):
-            return
 
 
 def forward(time=2):
@@ -315,7 +234,9 @@ def apriltag_detector_procedure(
             detect = detector.detect
 
             def angle(result):
-                v = result.corners[1] - result.corners[0]
+                v = (result.corners[1] + result.corners[0]) - (
+                    result.corners[3] + result.corners[2]
+                )
                 v = v / np.linalg.norm(v)
                 vertical = np.array([1, 0])
                 angle = np.arccos(np.dot(v, vertical))
@@ -341,17 +262,18 @@ def apriltag_detector_procedure(
     global target
     global targets
     target = None
-    targets = np.array()
+    targets = []
+
     def click_envent(event, x, y, flags, params):
-        while targets.size < 4:
-            if event == cv2.EVENT_LBUTTONDOWN:
-                global target
-                global targets
-                print(x, y)
-                target = np.array([x, y])
-                targets = np.append(target)
-    
-        cv2.destroyAllWindows()
+        global targets
+        if event == cv2.EVENT_LBUTTONDOWN:
+            global target
+            # global targets
+            print(x, y)
+            target = np.array([x, y])
+            targets.append(target)
+        if len(targets) >= 4:
+            cv2.destroyAllWindows()
 
     cv2.imshow("img", frame.copy())
     cv2.setMouseCallback("img", click_envent)
@@ -360,14 +282,16 @@ def apriltag_detector_procedure(
     print("hello")
 
     frame_counter = 0
-    client.publish("IDP_2023_Follower_left_speed", -100)
-    client.publish("IDP_2023_Follower_right_speed", 100)
+    # client.publish("IDP_2023_Follower_left_speed", -150)
+    # client.publish("IDP_2023_Follower_right_speed", 150)
 
     # current_position = np.array([0, 0])
     moving_forward = False
-    clockwise = True
+    clockwise = False
+    anticlockwise = False
     target = targets[0]
     current_target = 0
+    last_time = time.time()
     while True:
         frame = video_getter.frame
         # frame = detect_red(frame)
@@ -390,17 +314,24 @@ def apriltag_detector_procedure(
                 continue
 
             current_position[:] = result[0].center
-            print("target", target)
-            print("current", current_position)
+            # print("target", target)
+            # print("current", current_position)
             heading = np.float64(target - current_position)
             heading /= np.linalg.norm(heading)
             v = np.float64(result[0].corners[1] - result[0].corners[0])
+            cv2.circle(frame, np.int32(result[0].corners[3]), 10, (0, 0, 255), -1)
+            cv2.circle(frame, np.int32(result[0].corners[0]), 10, (0, 255, 0))
+            cv2.polylines(frame, [np.int32(targets)], False, (0, 255, 0), 2)
+            """ cv2.imshow("img", frame)
+            key = cv2.waitKey(1)
+            if key == ord("q"):
+                break"""
             v /= np.linalg.norm(v)
             angle_diff = np.arccos(np.dot(v, heading))
 
-            print("angle diference: ", angle_diff)
+            # print("angle diference: ", angle_diff)
 
-            if np.linalg.norm(current_position - target) < 10:
+            if np.linalg.norm(current_position - target) < 35:
                 client.publish("IDP_2023_Follower_left_speed", 0)
                 client.publish("IDP_2023_Follower_right_speed", 0)
                 print("done")
@@ -409,63 +340,53 @@ def apriltag_detector_procedure(
                     break
                 current_target += 1
                 target = targets[current_target]
+                clockwise = False
+                anticlockwise = False
+                moving_forward = False
 
-            if abs(angle_diff) < 0.2:
-                if not moving_forward:
+            if angle_diff < 0.2 or angle_diff > (2 * math.pi) - 0.2:
+                if not moving_forward or last_time - time.time() > 0.5:
                     client.publish("IDP_2023_Follower_left_speed", 250)
                     client.publish("IDP_2023_Follower_right_speed", 250)
                     moving_forward = True
+                    last_time = time.time()
                     print("forward")
+                    clockwise = False
+                    anticlockwise = False
 
             else:
-                if (heading[0] - np.float64(current_position[0])) * (
-                    v[1] - np.float64(current_position[1])
-                ) - (heading[1] - np.float64(current_position[1])) * (
-                    v[0] - np.float64(current_position[0])
+                """print(
+                    "left or right :",
+                    (current_position[0] - v[0]) * (target[1] - v[1])
+                    - ((current_position[1] - v[1]) * (target[0] - v[0])),
+                )"""
+                if (
+                    (np.float64(result[0].corners[1][0] - result[0].corners[0][0]))
+                    * (target[1] - result[0].corners[1][1])
+                    - (
+                        (np.float64(result[0].corners[1][1] - result[0].corners[0][1]))
+                        * (target[0] - result[0].corners[0][0])
+                    )
                 ) > 0:
-                    if not clockwise or moving_forward:
-                        client.publish("IDP_2023_Follower_left_speed", -100)
-                        client.publish("IDP_2023_Follower_right_speed", 100)
+                    print("clockwise")
+                    if not clockwise or time.time() - last_time > 0.5:
+                        client.publish("IDP_2023_Follower_left_speed", 150)
+                        client.publish("IDP_2023_Follower_right_speed", -150)
                         clockwise = True
                         moving_forward = False
-                        print("clockwise")
+                        anticlockwise = False
+                        print("\n\n\nclockwise\n\n\n")
+                        last_time = time.time()
                 else:
-                    if clockwise or moving_forward:
-                        client.publish("IDP_2023_Follower_left_speed", 100)
-                        client.publish("IDP_2023_Follower_right_speed", -100)
-                        print("anticlockwise")
+                    print("anticlockwise")
+                    if not anticlockwise or time.time() - last_time > 0.5:
+                        client.publish("IDP_2023_Follower_left_speed", -150)
+                        client.publish("IDP_2023_Follower_right_speed", 150)
+                        print("\n\n\nanticlockwise\n\n\n")
                         clockwise = False
                         moving_forward = False
-
-                """if angle_diff > 0:
-                    client.publish("IDP_2023_Follower_left_speed", -100)
-                    client.publish("IDP_2023_Follower_right_speed", 100)
-                    print("clockwise")
-                else:
-                    client.publish("IDP_2023_Follower_left_speed", 100)
-                    client.publish("IDP_2023_Follower_right_speed", -100)
-                    print("anticlockwise")"""
-
-            """a, b, c, d = result[0].corners
-            print(current_position)
-            frame = cv2.circle(
-                frame,
-                current_position.astype("int32"),
-                radius=12,
-                color=(255, 255, 255),
-                thickness=-1,
-            )
-            frame = cv2.polylines(
-                frame, [np.int32(result[0].corners)], True, (255, 255, 255), 2
-            )
-            if first_time:
-                frame = cv2.polylines(
-                    frame, [np.int32(positions)], False, (0, 0, 255), 2
-                )
-                first_time = False
-
-        if not first_time:
-            frame = cv2.polylines(frame, [np.int32(positions)], False, (0, 0, 255), 2)"""
+                        anticlockwise = True
+                        last_time = time.time()
 
         cv2.imshow("frame", frame)
         key = cv2.waitKey(1)
@@ -487,12 +408,18 @@ def main():
     if platform == "win32":
         # Windows
         apriltag_detector_procedure(
-            "http://localhost:8081/stream/video.mjpeg", module=pupil_apriltags
+            # "http://localhost:8081/stream/video.mjpeg",
+            1,
+            module=pupil_apriltags,
         )
     else:
         # mac
         apriltag_detector_procedure(
-            "http://localhost:8081/stream/video.mjpeg", module=apriltag
+            # "http://localhost:8081/stream/video.mjpeg",
+            1,
+            module=apriltag,
+            fix_distortion=False,
+            fix_perspective=False,
         )
 
 def detect_red_video(frame):
