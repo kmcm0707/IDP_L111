@@ -1,9 +1,6 @@
 #include <HCSR04.h>
 const int trigPin = 6;
 const int echoPin = 7;
-// defines variables
-long duration;
-int distance;
 UltraSonicDistanceSensor distancesensor(trigPin, echoPin);
 
 void setup() {
@@ -13,6 +10,7 @@ void setup() {
 void loop() {
   Serial.println(distancesensor.measureDistanceCm());
   delay(100);
+  
 }
 // 7.53 = correct
 // 4.5 - smallest allowed
