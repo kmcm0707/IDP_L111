@@ -14,3 +14,6 @@ void loop() {
   Serial.println(distancesensor.measureDistanceCm());
   delay(100);
 }
+// 7.53 = correct
+// 4.5 - smallest allowed
+// 10.41 - larget allowed
