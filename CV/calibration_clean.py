@@ -327,7 +327,7 @@ def load_vals(num=2):
 
 
 if __name__ == "__main__":
-    img = cv2.imread("calib_imgs/img_dump_manual_table3_2/7.jpg")
+    img = cv2.imread("calib_imgs/img_dump_manual/7.jpg")
     mtx, dist, opt_mtx = load_vals(num=6)  # best one is 6
     dim = (800, 800)
 

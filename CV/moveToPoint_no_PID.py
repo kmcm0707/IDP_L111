@@ -126,8 +126,9 @@ def perspective_transoformation(img, dim):
     cv2.imshow("img", img)
     cv2.setMouseCallback("img", click_envent)
     key = cv2.waitKey()"""
-    points = np.float32([[261, 682], [818, 630], [236, 151], [738, 92]])
+    # points = np.float32([[261, 682], [818, 630], [236, 151], [738, 92]])
     # points = np.float32(points)
+    points = np.float32([(255, 694), (833, 641), (217, 137), (753, 75)])
     new_points = np.float32([(0, 0), (0, dim[1]), (dim[0], 0), dim])
 
     M = cv2.getPerspectiveTransform(points, new_points)
@@ -277,11 +278,24 @@ def apriltag_detector_procedure(
         if len(targets) >= 7:
             cv2.destroyAllWindows()
 
-    cv2.imshow("img", frame.copy())
+    """cv2.imshow("img", frame.copy())
     cv2.setMouseCallback("img", click_envent)
     key = cv2.waitKey(0)
+    cv2.destroyAllWindows()
+    print(targets)"""
     # position_red = detect_red_video(frame_copy)
     # targets.insert(2, position_red)
+    targets = np.array(
+        [
+            [734, 560],
+            [739, 198],
+            [410, 128],
+            [93, 223],
+            [91, 531],
+            [196, 698],
+            [403, 712],
+        ]
+    )
     print("hello")
 
     frame_counter = 0
@@ -295,6 +309,9 @@ def apriltag_detector_procedure(
     target = targets[0]
     current_target = 0
     last_time = time.time()
+    time_average = time.time()
+    count_average = 0
+    start_point = [0, 0]
     client.publish("IDP_2023_Servo_Horizontal", 1)
     client.publish("IDP_2023_Servo_Vertical", 1)
     while True:
@@ -314,6 +331,7 @@ def apriltag_detector_procedure(
 
         result = detect(frame)
         if len(result) > 0:
+            count_average += 1
             if first_time:
                 first_time = False
                 continue
@@ -324,14 +342,18 @@ def apriltag_detector_procedure(
             heading = np.float64(target - current_position)
             heading /= np.linalg.norm(heading)
             v = np.float64(result[0].corners[1] - result[0].corners[0])
+            v /= np.linalg.norm(v)
+            u = np.float64(result[0].corners[2] - result[0].corners[1])
+            u /= np.linalg.norm(u)
             cv2.circle(frame, np.int32(result[0].corners[3]), 10, (0, 0, 255), -1)
             cv2.circle(frame, np.int32(result[0].corners[0]), 10, (0, 255, 0))
+            for each in targets:
+                cv2.circle(frame, np.int32(each), 35, (0, 255, 0))
             cv2.polylines(frame, [np.int32(targets)], False, (0, 255, 0), 2)
             """ cv2.imshow("img", frame)
             key = cv2.waitKey(1)
             if key == ord("q"):
                 break"""
-            v /= np.linalg.norm(v)
             angle_diff = np.arccos(np.dot(v, heading))
 
             # print("angle diference: ", angle_diff)
@@ -343,18 +365,27 @@ def apriltag_detector_procedure(
                 if current_target == 1:
                     client.publish("IDP_2023_Servo_Vertical", 0)
                     client.publish("IDP_2023_Servo_Horizontal", 0)
-                    time.sleep(5)
+                    # time.sleep(5)
+
                 if current_target == 2:
                     client.publish("IDP_2023_Servo_Vertical", 1)
                     client.publish("IDP_2023_Servo_Horizontal", 1)
-                    time.sleep(5)
+                    # time.sleep(5)
+
+                if current_target == 3:
+                    client.publish("IDP_2023_Set_Ultrasound", 0)
+
+                if current_target == 4:
+                    client.publish("IDP_2023_Set_Ultrasound", 0)
+
                 if current_target == 5:
                     client.publish("IDP_2023_Servo_Vertical", 1)
-                    client.publish("IDP_2023_Follower_left_speed", -250)
-                    client.publish("IDP_2023_Follower_right_speed", -250)
-                    time.sleep(4)
+                    client.publish("IDP_2023_Follower_left_speed", -255)
+                    client.publish("IDP_2023_Follower_right_speed", -255)
+                    # time.sleep(4)
                     client.publish("IDP_2023_Follower_left_speed", 0)
                     client.publish("IDP_2023_Follower_right_speed", 0)
+
                 if current_target == 6:
                     video_getter.stop()
                     break
@@ -363,46 +394,59 @@ def apriltag_detector_procedure(
                 clockwise = False
                 anticlockwise = False
                 moving_forward = False
-
+            """
+            if (
+                np.linalg.norm(current_position - start_point) / count_average < 0.5
+                and time.time() - time_average > 1
+            ):
+                time_average = time.time()
+                count_average = 0
+                start_point = current_position
+                client.publish("IDP_2023_Follower_left_speed", -250)
+                client.publish("IDP_2023_Follower_right_speed", -250)
+                time.sleep(1)
+                client.publish("IDP_2023_Follower_left_speed", 0)
+                client.publish("IDP_2023_Follower_right_speed", 0)
+            """
             if angle_diff < 0.2 or angle_diff > (2 * math.pi) - 0.2:
                 if not moving_forward or last_time - time.time() > 0.5:
-                    client.publish("IDP_2023_Follower_left_speed", 250)
-                    client.publish("IDP_2023_Follower_right_speed", 250)
+                    client.publish("IDP_2023_Follower_left_speed", 255)
+                    client.publish("IDP_2023_Follower_right_speed", 255)
                     moving_forward = True
                     last_time = time.time()
-                    print("forward")
                     clockwise = False
                     anticlockwise = False
 
             else:
+                if abs(np.dot(u, v)) > 0.1:
+                    continue
                 """print(
                     "left or right :",
                     (current_position[0] - v[0]) * (target[1] - v[1])
                     - ((current_position[1] - v[1]) * (target[0] - v[0])),
                 )"""
+                direction = (
+                    ((result[0].corners[1] + result[0].corners[2]))
+                    - (result[0].corners[0] + result[0].corners[3])
+                ) / 2
                 if (
-                    (np.float64(result[0].corners[1][0] - result[0].corners[0][0]))
-                    * (target[1] - result[0].corners[1][1])
+                    (np.float64(direction[0])) * (target[1] - result[0].corners[1][1])
                     - (
-                        (np.float64(result[0].corners[1][1] - result[0].corners[0][1]))
+                        (np.float64(direction[1]))
                         * (target[0] - result[0].corners[0][0])
                     )
                 ) > 0:
-                    print("clockwise")
                     if not clockwise or time.time() - last_time > 0.5:
                         client.publish("IDP_2023_Follower_left_speed", 125)
                         client.publish("IDP_2023_Follower_right_speed", -125)
                         clockwise = True
                         moving_forward = False
                         anticlockwise = False
-                        print("\n\n\nclockwise\n\n\n")
                         last_time = time.time()
                 else:
-                    print("anticlockwise")
                     if not anticlockwise or time.time() - last_time > 0.5:
                         client.publish("IDP_2023_Follower_left_speed", -125)
                         client.publish("IDP_2023_Follower_right_speed", 125)
-                        print("\n\n\nanticlockwise\n\n\n")
                         clockwise = False
                         moving_forward = False
                         anticlockwise = True
@@ -433,10 +477,11 @@ def main():
         )
     else:
         # mac
-        apriltag_detector_procedure(
-            "http://localhost:8081/stream/video.mjpeg",
-            module=apriltag,
-        )
+        while True:
+            apriltag_detector_procedure(
+                "http://localhost:8081/stream/video.mjpeg",
+                module=apriltag,
+            )
 
 
 def detect_red_video(frame):
