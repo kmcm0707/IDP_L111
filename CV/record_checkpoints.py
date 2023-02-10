@@ -53,20 +53,21 @@ def click_on_checkpoints(src) -> None:
     frame = cv2.undistort(frame, mtx, dist, None, newcameramtx)
 
     dim = (810, 810)
-    print("click on the corners of the table")
+    """print("click on the corners of the table")
     points = get_points(frame)
     if len(points) != 4:
         print("error with points")
-        return -1
+        return -1"""
+    get_points = np.float32([[261, 682][818, 630][236, 151][738, 92]])
 
     new_points = np.float32([(0, 0), (0, dim[1]), (dim[0], 0), dim])
 
-    M = cv2.getPerspectiveTransform(points.astype("float32"), new_points)
-    frame = cv2.warpPerspective(frame, M, dim)
+    # M = cv2.getPerspectiveTransform(points.astype("float32"), new_points)
+    # frame = cv2.warpPerspective(frame, M, dim)
     checkpoints = get_points(frame)
     print(checkpoints)
     video.release()
-    return checkpoints, M
+    return checkpoints  # ,M
 
 
 @numba.njit
@@ -121,5 +122,5 @@ def main():
 
 
 if __name__ == "__main__":
-    # click_on_checkpoints("http://localhost:8081/stream/video.mjpeg")
-    main()
+    click_on_checkpoints("http://localhost:8081/stream/video.mjpeg")
+    # main()
