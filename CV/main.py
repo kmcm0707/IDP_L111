@@ -477,10 +477,15 @@ def apriltag_detector_procedure(
         if len(result) > 0:
 
             # print(result)
-
             x, y = result[0].center
-            theta = angle(result[0])
-            print("angle", theta)
+            """theta = angle(result[0])
+            print("angle", theta)"""
+            v = result[0].corners[1] - result[0].corners[0]
+            v = v / np.linalg.norm(v)
+            u = result[0].corners[2] - result[0].corners[1]
+            u = u / np.linalg.norm(u)
+            if abs(np.dot(u, v)) > 0.1:
+                print("ranmp")
             # if first_time:
             current_position = np.array([x, y])
             # first_time = False
@@ -509,7 +514,7 @@ def apriltag_detector_procedure(
             frame = cv2.polylines(
                 frame, [np.int32(result[0].corners)], True, (255, 255, 255), 2
             )
-            print(speed)
+            # print(speed)
             if first_time:
                 frame = cv2.polylines(
                     frame, [np.int32(positions)], False, (0, 0, 255), 2
@@ -612,11 +617,11 @@ if __name__ == "__main__":
         cv2.waitKey(0)"""
 
     # this tries to apply this object detection with camera
-    video = cv2.VideoCapture(1)
+    """video = cv2.VideoCapture(1)
 
     detect_red_video(video)
 
-    video.release()
+    video.release()"""
 
     # this code works for the mjpeg stream
     """stream = cv2.VideoCapture("http://localhost:8081/stream/video.mjpeg")
@@ -626,8 +631,8 @@ if __name__ == "__main__":
 
     # this does apriltag detection on stream
     # video = cv2.VideoCapture("http://localhost:8081/stream/video.mjpeg")
-    """video = cv2.VideoCapture(0)
-    Detector = cv2.aruco.ArucoDetector(
+    # video = cv2.VideoCapture(0)
+    """Detector = cv2.aruco.ArucoDetector(
         cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_APRILTAG_36h11)
     )
 
@@ -649,6 +654,7 @@ if __name__ == "__main__":
             break"""
 
     # detecting apriltag using apriltag liberary
-    """video = cv2.VideoCapture(0)
-    detect_apriltag_2(video)
-    video.release()"""
+    # video = cv2.VideoCapture(0)
+    apriltag_detector_procedure("http://localhost:8081/stream/video.mjpeg", apriltag)
+    video.release()
+    cv2.destroyAllWindows()
