@@ -280,8 +280,8 @@ def apriltag_detector_procedure(
     cv2.imshow("img", frame.copy())
     cv2.setMouseCallback("img", click_envent)
     key = cv2.waitKey(0)
-    # position_red = detect_red_video(frame_copy)
-    # targets.insert(2, position_red)
+    position_red = detect_red_video(frame_copy)
+    targets.insert(2, position_red)
     print("hello")
 
     frame_counter = 0
@@ -468,22 +468,37 @@ def detect_red_video(frame):
         if cv2.contourArea(cont) <= 50:
             continue
         x, y, w, h = cv2.boundingRect(cont)
-
+        #if (x < 243  or x > 573 or y < 64 or y > 211):
+         #   continue
         centres.append((x, y, w, h))
-
+    font = cv2.FONT_HERSHEY_COMPLEX
+    block_red = None
     dim = frame.shape
     half = dim[1] * 0.5
     for x, y, w, h in centres:
         if (x < half) and (x > 180):
             cv2.rectangle(frame, (x, y), (x + w, y + h), (255, 0, 0))
-
+            cv2.putText(
+                frame,
+                f"{x}, {y}, {cv2.contourArea(cont)}",
+                (x, y),
+                font,
+                0.5,
+                (255, 0, 0),
+            )
+            block_red = (x, y, w, h)
+    print(block_red)
     # showing the feed with rectangles
     cv2.imshow("frame", frame)
     # for stopping the window wont run without it
     # see file docstring for detail
     key = cv2.waitKey(0)
-    return [x + w / 2, y + h / 2]
+    return [block_red[0] + block_red[2] / 2, block_red[1] + block_red[3] / 2]
 
 
 if __name__ == "__main__":
-    main()
+    # main()
+    video = cv2.VideoCapture("http://localhost:8081/stream/video.mjpeg")
+    detect_red_video(video.read()[1].copy())
+    video.release()
+    cv2.destroyAllWindows()

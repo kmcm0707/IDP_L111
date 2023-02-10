@@ -102,6 +102,7 @@ void setup() {
   mqttClient.subscribe(topic2);
   mqttClient.subscribe(vert_servo);
   mqttClient.subscribe(hori_servo);
+  mqttClient.subscribe(set_Ultra);
 
   // mqttClient.subscribe(topic3);
 
@@ -122,7 +123,7 @@ void loop() {
   const float k_p = 30;
   const float k_d = 10;
   mqttClient.poll();
-  while(distancesensor.measureDistanceCm() < 60 && enable_Ultrasound){
+  while(distancesensor.measureDistanceCm() < 30 && enable_Ultrasound){
     mqttClient.poll();
     error = -(7.53 - distancesensor.measureDistanceCm()); 
     I = I + error;
@@ -265,7 +266,7 @@ void onMqttMessage(int messageSize) {
   }
 
   if (current_topic == set_Ultra){
-    if(speed = 1){
+    if(speed == 1){
       enable_Ultrasound = true;
     } else {
       enable_Ultrasound = false;
