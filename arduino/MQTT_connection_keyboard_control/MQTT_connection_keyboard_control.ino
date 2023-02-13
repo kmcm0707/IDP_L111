@@ -18,25 +18,31 @@ MqttClient mqttClient(wifiClient);
 
 const char broker[] = "test.mosquitto.org";
 int        port     = 1883;
+
 String topic  = "IDP_2023_Follower_left_speed";
 String topic2  = "IDP_2023_Follower_right_speed";
-
 String vert_servo = "IDP_2023_Servo_Vertical";
 String hori_servo = "IDP_2023_Servo_Horizontal";
 String set_Ultra = "IDP_2023_Set_Ultrasound";
-//const char topic3[]  = "real_unique_topic_3";
+String set_BlockCheck = "IDP_2023_Set_Block";
 
 const int trigPin = 6;
 const int echoPin = 7;
 int servo_vertical_pin = 9;
 int servo_horizontal_pin = 10;
+int redPin = -1;
+int bluePin = -1;
+int pickedUpPin = -1;
 
 int vertical_angle_high = 125; //120?
 int vertical_angle_low = 25;
-int horizontal_angle_high =  80; //95?44wwws wqswswz
-int horizontal_angle_low = 30;
+int horizontal_angle_high =  80; //95 -- CLOSED
+int horizontal_angle_low = 30; // -- OPEN
+int drop_block_angle = horizontal_angle_high - 20;
+
 UltraSonicDistanceSensor distancesensor(trigPin, echoPin);
 bool enable_Ultrasound = false;
+
 Servo servo_vertical;
 Servo servo_horizontal;
 
@@ -49,6 +55,26 @@ Adafruit_DCMotor *m2 = AFMS.getMotor(2); //right
 
 int speed;
 String speed_str;
+
+bool checkBlock = false;
+
+void move_servo(servo, pin_no, start, end);
+  // Mover servo from start position to end position
+  servo.attach(pin_no);
+  if (start < end) {
+    // From arduino 'servo' example:
+    for (int pos = start; pos <= end; pos += 1) {
+      // in steps of 1 degree
+      servo.write(pos);              // tell servo to go to position in variable 'pos'
+      delay(15);
+    }
+  } else {
+    for (int pos = start; pos >= end; pos -= 1) {
+      servo.write(pos);
+      delay(15);
+    }
+  servo.detach();
+}
 
 void setup() {
   //Initialize serial and wait for port to open:
@@ -103,8 +129,7 @@ void setup() {
   mqttClient.subscribe(vert_servo);
   mqttClient.subscribe(hori_servo);
   mqttClient.subscribe(set_Ultra);
-
-  // mqttClient.subscribe(topic3);
+  mqttClient.subscribe(set_BlockCheck);
 
   // topics can be unsubscribed using:
   // mqttClient.unsubscribe(topic);
@@ -166,8 +191,20 @@ void loop() {
       m2->run(FORWARD);
       m2->setSpeed(rightspeed);
     }
-    
   }
+  if(checkBlock == true){
+    if(digitalRead(pickedUpPin)){
+      if(digitalRead(redPin)){
+        mqttClient.send("IDP_2023_Color", "0");
+      } else {
+        mqttClient.send("IDP_2023_Color", "1");
+      }
+    } else {
+      mqttClient.send("IDP_2023_Color", "-1");
+    }
+    checkBlock = false;
+  }
+  
 }
 
 void onMqttMessage(int messageSize) {
@@ -228,6 +265,33 @@ void onMqttMessage(int messageSize) {
   }
 
   if (current_topic == vert_servo){
+    if (speed == 1) {
+      // RAISE CLAW
+      move_servo(servo_vertical, servo_vertical_pin, vertical_angle_low, vertical_angle_high);
+    } else if (speed == 0) {
+      // LOWER CLAW
+      move_servo(servo_vertical, servo_vertical_pin, vertical_angle_high, vertical_angle_low);
+    }
+  }
+
+  if (current_topic == hori_servo){
+    if (speed == 1){
+      // CLOSE CLAW (low -> high)
+      move_servo(servo_horizontal, servo_horizontal_pin, horizontal_angle_low, horizontal_angle_high);
+    } else if (speed == 0){
+      // OPEN CLAW (high -> low)
+      move_servo(servo_horizontal, servo_horizontal_pin, horizontal_angle_high, horizontal_angle_low);
+    } else if (speed == 2){
+      // DROP BLOCK
+      move_servo(servo_horizontal, servo_horizontal_pin, horizontal_angle_high, drop_block_angle);
+      delay(500);
+      move_servo(servo_horizontal, servo_horizontal_pin, drop_block_angle, horizontal_angle_high);
+    }
+  }
+
+  /*
+
+  if (current_topic == vert_servo){
      servo_vertical.attach(servo_vertical_pin);
     if (speed == 1){
       // From arduino 'servo' example:
@@ -265,11 +329,21 @@ void onMqttMessage(int messageSize) {
     }
   }
 
+  */
+
   if (current_topic == set_Ultra){
     if(speed == 1){
       enable_Ultrasound = true;
     } else {
       enable_Ultrasound = false;
+    }
+  }
+
+  if (current_topic == set_BlockCheck){
+    if(speed == 1){
+      checkBlock = true;
+    } else {
+      checkBlock = false;
     }
   }
   
