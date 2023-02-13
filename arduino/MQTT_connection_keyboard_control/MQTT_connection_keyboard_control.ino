@@ -18,25 +18,30 @@ MqttClient mqttClient(wifiClient);
 
 const char broker[] = "test.mosquitto.org";
 int        port     = 1883;
+
 String topic  = "IDP_2023_Follower_left_speed";
 String topic2  = "IDP_2023_Follower_right_speed";
-
 String vert_servo = "IDP_2023_Servo_Vertical";
 String hori_servo = "IDP_2023_Servo_Horizontal";
 String set_Ultra = "IDP_2023_Set_Ultrasound";
-//const char topic3[]  = "real_unique_topic_3";
+String set_BlockCheck = "IDP_2023_Set_Block";
 
 const int trigPin = 6;
 const int echoPin = 7;
 int servo_vertical_pin = 9;
 int servo_horizontal_pin = 10;
+int redPin = -1;
+int bluePin = -1;
+int pickedUpPin = -1;
 
 int vertical_angle_high = 125; //120?
 int vertical_angle_low = 25;
 int horizontal_angle_high =  80; //95?44wwws wqswswz
 int horizontal_angle_low = 30;
+
 UltraSonicDistanceSensor distancesensor(trigPin, echoPin);
 bool enable_Ultrasound = false;
+
 Servo servo_vertical;
 Servo servo_horizontal;
 
@@ -49,6 +54,8 @@ Adafruit_DCMotor *m2 = AFMS.getMotor(2); //right
 
 int speed;
 String speed_str;
+
+bool checkBlock = false;
 
 void setup() {
   //Initialize serial and wait for port to open:
@@ -103,8 +110,7 @@ void setup() {
   mqttClient.subscribe(vert_servo);
   mqttClient.subscribe(hori_servo);
   mqttClient.subscribe(set_Ultra);
-
-  // mqttClient.subscribe(topic3);
+  mqttClient.subscribe(set_BlockCheck);
 
   // topics can be unsubscribed using:
   // mqttClient.unsubscribe(topic);
@@ -166,8 +172,20 @@ void loop() {
       m2->run(FORWARD);
       m2->setSpeed(rightspeed);
     }
-    
   }
+  if(checkBlock == true){
+    if(digitalRead(pickedUpPin)){
+      if(digitalRead(redPin)){
+        mqttClient.send("IDP_2023_Color", "0");
+      } else {
+        mqttClient.send("IDP_2023_Color", "1");
+      }
+    } else {
+      mqttClient.send("IDP_2023_Color", "-1");
+    }
+    checkBlock = false;
+  }
+  
 }
 
 void onMqttMessage(int messageSize) {
@@ -270,6 +288,14 @@ void onMqttMessage(int messageSize) {
       enable_Ultrasound = true;
     } else {
       enable_Ultrasound = false;
+    }
+  }
+
+  if (current_topic == set_BlockCheck){
+    if(speed == 1){
+      checkBlock = true;
+    } else {
+      checkBlock = false;
     }
   }
   

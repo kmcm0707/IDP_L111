@@ -377,8 +377,8 @@ def apriltag_detector_procedure(
                     client.publish("IDP_2023_Servo_Horizontal", 1)
                     time.sleep(2)
                     client.publish("IDP_2023_Servo_Vertical", 1)
-                    time.sleep(5)
-                    
+                    client.publish("IDP_2023_Set_Block", 1)
+                    time.sleep(3)
                     client.on_message = on_message
                     client.loop_start()
                     while color is None:
@@ -386,7 +386,7 @@ def apriltag_detector_procedure(
                     if color == 0:
                         # red
                         print("red")
-                    else:
+                    elif color == 1:
                         # blue
                         print("blue")
                     client.loop_stop()
