@@ -105,7 +105,6 @@ class Controller:
 
     def update(self):
         while not self.stopped:
-            time.sleep(0.8)
             frame = self.video_getter.frame
             if frame is None:
                 continue
@@ -157,7 +156,7 @@ class Controller:
             if angle_diff < threshold or angle_diff > (2 * math.pi) - threshold:
                 return
 
-            if alternating_couter > 4:
+            """if alternating_couter > 4:
                 client.publish("IDP_2023_Follower_left_speed", -250)
                 client.publish("IDP_2023_Follower_right_speed", -250)
                 time.sleep(0.5)
@@ -165,7 +164,7 @@ class Controller:
                 client.publish("IDP_2023_Follower_left_speed", 0)
                 client.publish("IDP_2023_Follower_right_speed", 0)
                 anticlockwise = False
-                clockwise = False
+                clockwise = False"""
 
             try:
                 direction = (
@@ -411,7 +410,8 @@ if __name__ == "__main__":
     option = apriltag.DetectorOptions(families="tag36h11")
     detector = apriltag.Detector(option)
     robot = Controller(video_getter, mtx, dist, newcameramtx, M, dim, detector)
+    # robot.show()
 
     for each_point in path:
-        robot.rotate(each_point, threshold=1)
+        robot.rotate(each_point, threshold=0.2)
         robot.move(each_point)
