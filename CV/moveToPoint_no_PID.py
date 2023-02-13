@@ -57,6 +57,7 @@ client.connect(mqttBroker)
 
 global target
 global targets
+global color
 
 
 class VideoGet:
@@ -176,6 +177,9 @@ def get_points(img):
         rotate(video_getter, M, point, detector, mtx, dist, newcameramtx, dim, current_head)
         forward(2)"""
 
+def on_message(client, userdata, msg):
+    global color
+    color = np.int32(msg.payload.decode())
 
 def apriltag_detector_procedure(
     src, module, fix_distortion=True, fix_perspective=True, alpha=1, controller=None
@@ -199,7 +203,8 @@ def apriltag_detector_procedure(
     alpha: int, optional
         if 0 then undistorted images shows no void
     """
-
+    client.subscribe("IDP_2023_Color")
+    client.on_message = on_message
     if fix_distortion or fix_perspective:
         mtx, dist, newcameramtx = cal.load_vals(6)  # best one is 6
 
@@ -264,9 +269,10 @@ def apriltag_detector_procedure(
         frame = cv2.warpPerspective(frame, M, dim)
     global target
     global targets
+    global color
     target = None
     targets = []
-
+    color = None
     def click_envent(event, x, y, flags, params):
         global targets
         if event == cv2.EVENT_LBUTTONDOWN:
@@ -368,11 +374,25 @@ def apriltag_detector_procedure(
                     # time.sleep(5)
 
                 if current_target == 2:
-                    client.publish("IDP_2023_Servo_Vertical", 1)
                     client.publish("IDP_2023_Servo_Horizontal", 1)
-                    # time.sleep(5)
-
+                    time.sleep(2)
+                    client.publish("IDP_2023_Servo_Vertical", 1)
+                    time.sleep(5)
+                    
+                    client.on_message = on_message
+                    client.loop_start()
+                    while color is None:
+                        time.sleep(0.1)
+                    if color == 0:
+                        # red
+                        print("red")
+                    else:
+                        # blue
+                        print("blue")
+                    client.loop_stop()
+                    color = None
                 if current_target == 3:
+                    #client.publish("IDP_2023_Set_Ultrasound", 1)
                     client.publish("IDP_2023_Set_Ultrasound", 0)
 
                 if current_target == 4:
@@ -382,7 +402,7 @@ def apriltag_detector_procedure(
                     client.publish("IDP_2023_Servo_Vertical", 1)
                     client.publish("IDP_2023_Follower_left_speed", -255)
                     client.publish("IDP_2023_Follower_right_speed", -255)
-                    # time.sleep(4)
+                    time.sleep(5)
                     client.publish("IDP_2023_Follower_left_speed", 0)
                     client.publish("IDP_2023_Follower_right_speed", 0)
 
