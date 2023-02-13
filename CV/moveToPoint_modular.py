@@ -54,10 +54,17 @@ mqttBroker = "test.mosquitto.org"
 # mqttBroker =  "public.mqtthq.com"
 client = mqtt.Client("Python")
 client.connect(mqttBroker)
+client.subscribe("IDP_2023_Color")
+
+def on_message(client, userdata, msg):
+    global color
+    color = np.int32(msg.payload.decode())
+
+client.on_message = on_message
 
 global target
 global targets
-
+global color
 
 class VideoGet:
     """
@@ -85,29 +92,6 @@ class VideoGet:
         self.stopped = True
 
 
-class VideoShow:
-    """
-    Class that continuously shows a frame using a dedicated thread.
-    """
-
-    def __init__(self, frame=None):
-        self.frame = frame
-        self.stopped = False
-
-    def start(self):
-        Thread(target=self.show, args=()).start()
-        return self
-
-    def show(self):
-
-        while not self.stopped:
-            cv2.imshow("Video", self.frame)
-            if cv2.waitKey(1) == ord("q"):
-                self.stopped = True
-
-    def stop(self):
-        self.stopped = True
-
 
 def perspective_transoformation(img, dim):
     """function for manual perspective transformation of an image
@@ -126,19 +110,12 @@ def perspective_transoformation(img, dim):
     cv2.imshow("img", img)
     cv2.setMouseCallback("img", click_envent)
     key = cv2.waitKey()"""
-    # points = np.float32([[261, 682], [818, 630], [236, 151], [738, 92]])
     # points = np.float32(points)
     points = np.float32([(255, 694), (833, 641), (217, 137), (753, 75)])
     new_points = np.float32([(0, 0), (0, dim[1]), (dim[0], 0), dim])
 
     M = cv2.getPerspectiveTransform(points, new_points)
     return M
-
-
-def forward(time=2):
-    client.publish("IDP_2023_Follower_left_speed", 200)
-    client.publish("IDP_2023_Follower_right_speed", 200)
-    time.sleep(time)
 
 
 def get_points(img):
@@ -159,22 +136,6 @@ def get_points(img):
     points = np.int32(points)
     return points
 
-
-"""def controll():
-    src = "http://localhost:8081/stream/video.mjpeg"
-    video_getter = VideoGet(src).start()
-
-    detector = apriltag.Detector()
-    mtx, dist, newcameramtx, dim = cal.load_vals(6)
-    M = perspective_transoformation(video_getter.frame, dim)
-    mtx, dist, newcameramtx, dim = cal.load_vals(6)
-    current_head = np.float64([1, 0])
-
-    # points = get_points(video_getter.frame)
-    # M = cv2.getPerspectiveTransform(points, new_points)   
-        current_position = np.float64(result[0].center)
-        rotate(video_getter, M, point, detector, mtx, dist, newcameramtx, dim, current_head)
-        forward(2)"""
 
 
 def move_to(
@@ -282,10 +243,13 @@ def move_to(
                         last_time = time.time()
 
 
+
 def main():
+    global color
+    color = None
     targets = []
 
-    def click_envent(event, x, y, flags, params):
+    """def click_envent(event, x, y, flags, params):
         if event == cv2.EVENT_LBUTTONDOWN:
             print(x, y)
             target = np.array([x, y])
@@ -295,7 +259,7 @@ def main():
 
         if event == cv2.EVENT_RBUTTONDOWN:
             print("done")
-            cv2.destroyAllWindows()
+            cv2.destroyAllWindows()"""
 
     path = []
     src = "http://localhost:8081/stream/video.mjpeg"
@@ -314,11 +278,11 @@ def main():
     M = perspective_transoformation(frame, dim)
     frame = cv2.warpPerspective(frame, M, dim)
 
-    cv2.imshow("img", frame)
-    cv2.setMouseCallback("img", click_envent)
-    cv2.waitKey()
+    #cv2.imshow("img", frame)
+    #cv2.setMouseCallback("img", click_envent)
+    #cv2.waitKey()
     video.release()
-    cv2.destroyAllWindows()
+    #cv2.destroyAllWindows()
     print(targets)
 
     video_getter = VideoGet(src).start()
@@ -327,7 +291,7 @@ def main():
     detector = apriltag.Detector(option)
     detect = detector.detect
 
-    """targets = np.array(
+    targets = np.array(
         [
             [734, 560],
             [739, 198],
@@ -337,12 +301,20 @@ def main():
             [196, 698],
             [403, 712],
         ]
-    )"""
+    )
+    targets[2] = detect_red_video(frame)
+    client.publish("IDP_2023_Servo_Horizontal", 1)
+    client.publish("IDP_2023_Servo_Vertical", 1)
 
     move_to(targets[0], video_getter, mtx, dist, newcameramtx, dim, M, detect)
-
+    move_to(targets[1], video_getter, mtx, dist, newcameramtx, dim, M, detect)
+    client.publish("IDP_2023_Servo_Vertical", 0)
+    client.publish("IDP_2023_Servo_Horizontal", 0)
+    time.sleep(5)
+    #over the ramp claw down
+    #now moves to red block
     move_to(
-        targets[1],
+        targets[2],
         video_getter,
         mtx,
         dist,
@@ -353,10 +325,8 @@ def main():
         only_rotate=True,
         angle_threshold=0.2,
     )
-    client.publish("IDP_2023_Servo_Vertical", 0)
-
     move_to(
-        targets[1],
+        targets[2],
         video_getter,
         mtx,
         dist,
@@ -366,6 +336,44 @@ def main():
         detect,
         angle_threshold=0.2,
     )
+    client.publish("IDP_2023_Servo_Horizontal", 1)
+    time.sleep(2)
+    client.publish("IDP_2023_Servo_Vertical", 1)
+    client.publish("IDP_2023_Set_Block", 1)
+    client.loop_start()
+    time.sleep(3)
+    while color is None:
+        time.sleep(0.1)
+    if color == 0:
+        # red
+        print("red")
+    elif color == 1:
+        # blue
+        print("blue")
+    else:
+        #didn't detect
+        print("error")
+    client.loop_stop()
+    color = None
+    
+    ## tunnel
+    move_to(targets[3], video_getter, mtx, dist, newcameramtx, dim, M, detect)
+    #client.publish("IDP_2023_Set_Ultrasound", 1)
+    move_to(targets[4], video_getter, mtx, dist, newcameramtx, dim, M, detect)
+    client.publish("IDP_2023_Set_Ultrasound", 0)
+    
+    ## move to put down areas
+    move_to(targets[5], video_getter, mtx, dist, newcameramtx, dim, M, detect)
+    client.publish("IDP_2023_Servo_Horizontal", 0)  
+    client.publish("IDP_2023_Follower_left_speed", -255)
+    client.publish("IDP_2023_Follower_right_speed", -255)
+    time.sleep(5)
+    client.publish("IDP_2023_Follower_left_speed", 0)
+    client.publish("IDP_2023_Follower_right_speed", 0)
+
+    move_to(targets[6], video_getter, mtx, dist, newcameramtx, dim, M, detect)
+    video_getter.stop()
+    
 
 
 def detect_red_video(frame):
@@ -375,7 +383,7 @@ def detect_red_video(frame):
     hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 
     # red threshold values
-    lower_red = np.array([120, 70, 80])
+    lower_red = np.array([130, 100, 100])
     upper_red = np.array([180, 255, 255])
 
     # one is ranges shows up white and else in black

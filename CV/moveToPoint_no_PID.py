@@ -294,9 +294,6 @@ def apriltag_detector_procedure(
     target = targets[0]
     current_target = 0
     last_time = time.time()
-    time_average = time.time()
-    count_average = 0
-    start_point = [0, 0]
     client.publish("IDP_2023_Servo_Horizontal", 1)
     client.publish("IDP_2023_Servo_Vertical", 1)
     while True:
@@ -316,7 +313,6 @@ def apriltag_detector_procedure(
 
         result = detect(frame)
         if len(result) > 0:
-            count_average += 1
             if first_time:
                 first_time = False
                 continue
