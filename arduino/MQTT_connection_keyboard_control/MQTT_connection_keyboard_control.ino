@@ -36,8 +36,9 @@ int pickedUpPin = -1;
 
 int vertical_angle_high = 125; //120?
 int vertical_angle_low = 25;
-int horizontal_angle_high =  80; //95?44wwws wqswswz
-int horizontal_angle_low = 30;
+int horizontal_angle_high =  80; //95 -- CLOSED
+int horizontal_angle_low = 30; // -- OPEN
+int drop_block_angle = horizontal_angle_high - 20;
 
 UltraSonicDistanceSensor distancesensor(trigPin, echoPin);
 bool enable_Ultrasound = false;
@@ -56,6 +57,24 @@ int speed;
 String speed_str;
 
 bool checkBlock = false;
+
+void move_servo(servo, pin_no, start, end);
+  // Mover servo from start position to end position
+  servo.attach(pin_no);
+  if (start < end) {
+    // From arduino 'servo' example:
+    for (int pos = start; pos <= end; pos += 1) {
+      // in steps of 1 degree
+      servo.write(pos);              // tell servo to go to position in variable 'pos'
+      delay(15);
+    }
+  } else {
+    for (int pos = start; pos >= end; pos -= 1) {
+      servo.write(pos);
+      delay(15);
+    }
+  servo.detach();
+}
 
 void setup() {
   //Initialize serial and wait for port to open:
@@ -246,6 +265,33 @@ void onMqttMessage(int messageSize) {
   }
 
   if (current_topic == vert_servo){
+    if (speed == 1) {
+      // RAISE CLAW
+      move_servo(servo_vertical, servo_vertical_pin, vertical_angle_low, vertical_angle_high);
+    } else if (speed == 0) {
+      // LOWER CLAW
+      move_servo(servo_vertical, servo_vertical_pin, vertical_angle_high, vertical_angle_low);
+    }
+  }
+
+  if (current_topic == hori_servo){
+    if (speed == 1){
+      // CLOSE CLAW (low -> high)
+      move_servo(servo_horizontal, servo_horizontal_pin, horizontal_angle_low, horizontal_angle_high);
+    } else if (speed == 0){
+      // OPEN CLAW (high -> low)
+      move_servo(servo_horizontal, servo_horizontal_pin, horizontal_angle_high, horizontal_angle_low);
+    } else if (speed == 2){
+      // DROP BLOCK
+      move_servo(servo_horizontal, servo_horizontal_pin, horizontal_angle_high, drop_block_angle);
+      delay(500);
+      move_servo(servo_horizontal, servo_horizontal_pin, drop_block_angle, horizontal_angle_high);
+    }
+  }
+
+  /*
+
+  if (current_topic == vert_servo){
      servo_vertical.attach(servo_vertical_pin);
     if (speed == 1){
       // From arduino 'servo' example:
@@ -282,6 +328,8 @@ void onMqttMessage(int messageSize) {
       }
     }
   }
+
+  */
 
   if (current_topic == set_Ultra){
     if(speed == 1){
