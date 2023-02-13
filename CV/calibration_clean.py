@@ -257,7 +257,7 @@ def undistorted_live_feed(num=2):
 
 def undistort_frame(img):
     "function to undistort a frame/image"
-    mtx, dist, new_mtx = load_vals(2)
+    mtx, dist, new_mtx = load_vals(6)
     h, w = img.shape[:2]
     # newcameramtx, roi = cv2.getOptimalNewCameraMatrix(mtx, dist, (w, h), 1, (w, h))
 

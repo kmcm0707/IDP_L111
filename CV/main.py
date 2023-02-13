@@ -606,15 +606,20 @@ if __name__ == "__main__":
     detect_line(img)"""
 
     # For blocks
-    """for i in range(1, 9):
-        img = cv2.imread(f"calib_imgs/test_imgs/{i}.png")
+    video = cv2.VideoCapture("http://localhost:8081/stream/video.mjpeg")
+    while True:
+        ret, img = video.read()
+        if not ret:
+            continue
         img = cal.undistort_frame(img)
         dim = (810, 810)
         M = perspective_transoformation(img, dim)
         img = cv2.warpPerspective(img, M, dim)
         img = detect_red(img)
         cv2.imshow("img", img)
-        cv2.waitKey(0)"""
+        key = cv2.waitKey(0)
+        if key == ord("q"):
+            break
 
     # this tries to apply this object detection with camera
     """video = cv2.VideoCapture(1)
@@ -655,6 +660,6 @@ if __name__ == "__main__":
 
     # detecting apriltag using apriltag liberary
     # video = cv2.VideoCapture(0)
-    apriltag_detector_procedure("http://localhost:8081/stream/video.mjpeg", apriltag)
+    """apriltag_detector_procedure("http://localhost:8081/stream/video.mjpeg", apriltag)
     video.release()
-    cv2.destroyAllWindows()
+    cv2.destroyAllWindows()"""

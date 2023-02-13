@@ -36,7 +36,7 @@ int pickedUpPin = -1;
 
 int vertical_angle_high = 125; //120?
 int vertical_angle_low = 25;
-int horizontal_angle_high =  80; //95 -- CLOSED
+int horizontal_angle_high =  110; //95 -- CLOSED
 int horizontal_angle_low = 30; // -- OPEN
 int drop_block_angle = horizontal_angle_high - 20;
 
@@ -58,7 +58,7 @@ String speed_str;
 
 bool checkBlock = false;
 
-void move_servo(servo, pin_no, start, end);
+void move_servo_new(Servo servo, int pin_no, int start, int end){
   // Mover servo from start position to end position
   servo.attach(pin_no);
   if (start < end) {
@@ -74,6 +74,7 @@ void move_servo(servo, pin_no, start, end);
       delay(15);
     }
   servo.detach();
+  }
 }
 
 void setup() {
@@ -195,12 +196,18 @@ void loop() {
   if(checkBlock == true){
     if(digitalRead(pickedUpPin)){
       if(digitalRead(redPin)){
-        mqttClient.send("IDP_2023_Color", "0");
+        mqttClient.beginMessage("IDP_2023_Color");
+        mqttClient.print("0");
+        mqttClient.endMessage();
       } else {
-        mqttClient.send("IDP_2023_Color", "1");
+        mqttClient.beginMessage("IDP_2023_Color");
+        mqttClient.print("1");
+        mqttClient.endMessage();
       }
     } else {
-      mqttClient.send("IDP_2023_Color", "-1");
+      mqttClient.beginMessage("IDP_2023_Color");
+      mqttClient.print("-1");
+      mqttClient.endMessage();
     }
     checkBlock = false;
   }
@@ -267,25 +274,25 @@ void onMqttMessage(int messageSize) {
   if (current_topic == vert_servo){
     if (speed == 1) {
       // RAISE CLAW
-      move_servo(servo_vertical, servo_vertical_pin, vertical_angle_low, vertical_angle_high);
+      move_servo_new(servo_vertical, servo_vertical_pin, vertical_angle_low, vertical_angle_high);
     } else if (speed == 0) {
       // LOWER CLAW
-      move_servo(servo_vertical, servo_vertical_pin, vertical_angle_high, vertical_angle_low);
+      move_servo_new(servo_vertical, servo_vertical_pin, vertical_angle_high, vertical_angle_low);
     }
   }
 
   if (current_topic == hori_servo){
     if (speed == 1){
       // CLOSE CLAW (low -> high)
-      move_servo(servo_horizontal, servo_horizontal_pin, horizontal_angle_low, horizontal_angle_high);
+      move_servo_new(servo_horizontal, servo_horizontal_pin, horizontal_angle_low, horizontal_angle_high);
     } else if (speed == 0){
       // OPEN CLAW (high -> low)
-      move_servo(servo_horizontal, servo_horizontal_pin, horizontal_angle_high, horizontal_angle_low);
+      move_servo_new(servo_horizontal, servo_horizontal_pin, horizontal_angle_high, horizontal_angle_low);
     } else if (speed == 2){
       // DROP BLOCK
-      move_servo(servo_horizontal, servo_horizontal_pin, horizontal_angle_high, drop_block_angle);
+      move_servo_new(servo_horizontal, servo_horizontal_pin, horizontal_angle_high, drop_block_angle);
       delay(500);
-      move_servo(servo_horizontal, servo_horizontal_pin, drop_block_angle, horizontal_angle_high);
+      move_servo_new(servo_horizontal, servo_horizontal_pin, drop_block_angle, horizontal_angle_high);
     }
   }
 

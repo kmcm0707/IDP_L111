@@ -158,6 +158,7 @@ def on_message(client, userdata, msg):
     global color
     color = np.int32(msg.payload.decode())
 
+
 def apriltag_detector_procedure(
     src, module, fix_distortion=True, fix_perspective=True, alpha=1, controller=None
 ) -> None:
@@ -210,6 +211,7 @@ def apriltag_detector_procedure(
         video.release()
 
     video_getter = VideoGet(src).start()
+    frame = video_getter.frame
     try:
         if module is apriltag:
             option = apriltag.DetectorOptions(families="tag36h11")
@@ -235,15 +237,20 @@ def apriltag_detector_procedure(
 
     current_position = np.array([0, 0])
     first_time = True
-    frame = video_getter.frame
+    time.sleep(5)
     frame_copy = frame.copy()
-    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
     if fix_distortion:
         frame = cv2.undistort(frame, mtx, dist, None, newcameramtx)
 
     if fix_perspective:
         frame = cv2.warpPerspective(frame, M, dim)
+
+    # position_red = detect_red(frame)
+    position_red = detect_red(frame)
+    print(position_red)
+
+    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
     global target
     global targets
@@ -268,8 +275,6 @@ def apriltag_detector_procedure(
     key = cv2.waitKey(0)
     cv2.destroyAllWindows()
     print(targets)"""
-    position_red = detect_red_video(frame_copy)
-    targets.insert(2, position_red)
     targets = np.array(
         [
             [734, 560],
@@ -281,6 +286,7 @@ def apriltag_detector_procedure(
             [403, 712],
         ]
     )
+    targets[2] = position_red
     print("hello")
 
     frame_counter = 0
@@ -366,17 +372,17 @@ def apriltag_detector_procedure(
                         # blue
                         print("blue")
                     else:
-                        #didn't detect
+                        # didn't detect
                         print("error")
                     client.loop_stop()
                     color = None
                 elif current_target == 3:
-                    #client.publish("IDP_2023_Set_Ultrasound", 1)
+                    # client.publish("IDP_2023_Set_Ultrasound", 1)
                     client.publish("IDP_2023_Set_Ultrasound", 0)
                 elif current_target == 4:
                     client.publish("IDP_2023_Set_Ultrasound", 0)
                 elif current_target == 5:
-                    client.publish("IDP_2023_Servo_Vertical", 1)
+                    client.publish("IDP_2023_Servo_Horizontal", 0)
                     client.publish("IDP_2023_Follower_left_speed", -255)
                     client.publish("IDP_2023_Follower_right_speed", -255)
                     time.sleep(5)
@@ -460,11 +466,80 @@ def main():
         )
     else:
         # mac
-        while True:
-            apriltag_detector_procedure(
-                "http://localhost:8081/stream/video.mjpeg",
-                module=apriltag,
+        # while True:
+        apriltag_detector_procedure(
+            "http://localhost:8081/stream/video.mjpeg",
+            module=apriltag,
+        )
+
+
+def detect_red(frame):
+    "for detecting red cube in an image"
+
+    # TODO: do the processing in particular section of the image
+
+    font = cv2.FONT_HERSHEY_COMPLEX
+
+    # Convert BGR to HSV
+    hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+
+    # define range of blue color in HSV
+
+    lower_red = np.array([130, 100, 100])
+
+    upper_red = np.array([180, 255, 255])
+
+    # Threshold the HSV image to get only blue colours
+    mask = cv2.inRange(hsv, lower_red, upper_red)
+
+    kernel = np.ones((7, 7), np.uint8)
+    mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
+    mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
+
+    # segmented_img = cv2.bitwise_and(frame, frame, mask=mask)
+    contours, hierarchy = cv2.findContours(
+        mask.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
+    )
+    # seg_output = cv2.drawContours(segmented_img, contours, -1, (0, 255, 0),3)
+    # output = cv2.drawContours(frame, contours, -1, (0, 255, 0), 3)
+    centres = []
+    for cont in contours:
+        """if cv2.contourArea(cont) <= 20:
+        continue"""
+        x, y, w, h = cv2.boundingRect(cont)
+        if x < 243 or x > 573 or y < 64 or y > 211:
+            pass
+        else:
+            cv2.rectangle(frame, (x, y), (x + w, y + h), (255, 0, 0))
+            cv2.putText(
+                frame,
+                f"{x}, {y}, {cv2.contourArea(cont)}",
+                (x, y),
+                font,
+                0.5,
+                (255, 0, 0),
             )
+            cv2.imshow("red", frame)
+            cv2.waitKey()
+            return (x, y)
+
+        centres.append((x, y, w, h))
+
+    dim = frame.shape
+    half = dim[1] * 0.5
+    for x, y, w, h in centres:
+        if True:  # (x < half) and (x > 180):
+            cv2.rectangle(frame, (x, y), (x + w, y + h), (255, 0, 0))
+            cv2.putText(
+                frame,
+                f"{x}, {y}, {cv2.contourArea(cont)}",
+                (x, y),
+                font,
+                0.5,
+                (255, 0, 0),
+            )
+
+    return frame, centres
 
 
 def detect_red_video(frame):
@@ -479,7 +554,8 @@ def detect_red_video(frame):
 
     # one is ranges shows up white and else in black
     mask = cv2.inRange(hsv, lower_red, upper_red)
-
+    cv2.imshow("mask", mask)
+    cv2.waitKey()
     # noise reduction
     kernel = np.ones((7, 7), np.uint8)
     mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
@@ -493,17 +569,19 @@ def detect_red_video(frame):
     # drawing rectangles
     centres = []
     for cont in contours:
-        if cv2.contourArea(cont) <= 50:
+        if cv2.contourArea(cont) <= 30:
             continue
         x, y, w, h = cv2.boundingRect(cont)
-        #if (x < 243  or x > 573 or y < 64 or y > 211):
-         #   continue
+        # if (x < 243  or x > 573 or y < 64 or y > 211):
+        #   continue
         centres.append((x, y, w, h))
     font = cv2.FONT_HERSHEY_COMPLEX
     block_red = None
     dim = frame.shape
     half = dim[1] * 0.5
     for x, y, w, h in centres:
+        if x < 243 or x > 573 or y < 64 or y > 211:
+            continue
         if (x < half) and (x > 180):
             cv2.rectangle(frame, (x, y), (x + w, y + h), (255, 0, 0))
             cv2.putText(
@@ -526,4 +604,3 @@ def detect_red_video(frame):
 
 if __name__ == "__main__":
     main()
-
