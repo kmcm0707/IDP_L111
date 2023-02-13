@@ -270,12 +270,12 @@ def apriltag_detector_procedure(
         if len(targets) >= 7:
             cv2.destroyAllWindows()
 
-    """cv2.imshow("img", frame.copy())
+    cv2.imshow("img", frame.copy())
     cv2.setMouseCallback("img", click_envent)
     key = cv2.waitKey(0)
     cv2.destroyAllWindows()
-    print(targets)"""
-    targets = np.array(
+    print(targets)
+    """targets = np.array(
         [
             [734, 560],
             [739, 198],
@@ -286,7 +286,7 @@ def apriltag_detector_procedure(
             [403, 712],
         ]
     )
-    targets[2] = position_red
+    targets[2] = position_red"""
     print("hello")
 
     frame_counter = 0

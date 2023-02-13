@@ -56,15 +56,18 @@ client = mqtt.Client("Python")
 client.connect(mqttBroker)
 client.subscribe("IDP_2023_Color")
 
+
 def on_message(client, userdata, msg):
     global color
     color = np.int32(msg.payload.decode())
+
 
 client.on_message = on_message
 
 global target
 global targets
 global color
+
 
 class VideoGet:
     """
@@ -90,7 +93,6 @@ class VideoGet:
 
     def stop(self):
         self.stopped = True
-
 
 
 def perspective_transoformation(img, dim):
@@ -135,7 +137,6 @@ def get_points(img):
     cv2.destroyAllWindows()
     points = np.int32(points)
     return points
-
 
 
 def move_to(
@@ -243,7 +244,6 @@ def move_to(
                         last_time = time.time()
 
 
-
 def main():
     global color
     color = None
@@ -272,26 +272,29 @@ def main():
         print("error with video feed")
         return -1
 
+    video.release()
+
+    video_getter = VideoGet(src).start()
+    time.sleep(2)
+    frame = video_getter.frame
+
     frame = cv2.undistort(frame, mtx, dist, None, newcameramtx)
 
     dim = (810, 810)
     M = perspective_transoformation(frame, dim)
     frame = cv2.warpPerspective(frame, M, dim)
 
-    #cv2.imshow("img", frame)
-    #cv2.setMouseCallback("img", click_envent)
-    #cv2.waitKey()
-    video.release()
-    #cv2.destroyAllWindows()
+    # cv2.imshow("img", frame)
+    # cv2.setMouseCallback("img", click_envent)
+    # cv2.waitKey()
+    # cv2.destroyAllWindows()
     print(targets)
-
-    video_getter = VideoGet(src).start()
 
     option = apriltag.DetectorOptions(families="tag36h11")
     detector = apriltag.Detector(option)
     detect = detector.detect
 
-    targets = np.array(
+    """targets = np.array(
         [
             [734, 560],
             [739, 198],
@@ -301,18 +304,48 @@ def main():
             [196, 698],
             [403, 712],
         ]
-    )
-    targets[2] = detect_red_video(frame)
-    client.publish("IDP_2023_Servo_Horizontal", 1)
+    )"""
     client.publish("IDP_2023_Servo_Vertical", 1)
+    targets = np.array(
+        [[198, 504], [190, 680], [188, 804]],
+    )
+
+    """targets[2] = detect_red(frame)
+    client.publish("IDP_2023_Servo_Horizontal", 1)
+    client.publish("IDP_2023_Servo_Vertical", 1)"""
 
     move_to(targets[0], video_getter, mtx, dist, newcameramtx, dim, M, detect)
+    move_to(
+        targets[1],
+        video_getter,
+        mtx,
+        dist,
+        newcameramtx,
+        dim,
+        M,
+        detect,
+        only_rotate=True,
+        angle_threshold=0.2,
+    )
     move_to(targets[1], video_getter, mtx, dist, newcameramtx, dim, M, detect)
+    move_to(
+        targets[2],
+        video_getter,
+        mtx,
+        dist,
+        newcameramtx,
+        dim,
+        M,
+        detect,
+        only_rotate=True,
+        angle_threshold=0.2,
+    )
+    """
     client.publish("IDP_2023_Servo_Vertical", 0)
     client.publish("IDP_2023_Servo_Horizontal", 0)
     time.sleep(5)
-    #over the ramp claw down
-    #now moves to red block
+    # over the ramp claw down
+    # now moves to red block
     move_to(
         targets[2],
         video_getter,
@@ -351,29 +384,97 @@ def main():
         # blue
         print("blue")
     else:
-        #didn't detect
+        # didn't detect
         print("error")
     client.loop_stop()
     color = None
-    
+
     ## tunnel
     move_to(targets[3], video_getter, mtx, dist, newcameramtx, dim, M, detect)
-    #client.publish("IDP_2023_Set_Ultrasound", 1)
+    # client.publish("IDP_2023_Set_Ultrasound", 1)
     move_to(targets[4], video_getter, mtx, dist, newcameramtx, dim, M, detect)
     client.publish("IDP_2023_Set_Ultrasound", 0)
-    
+
     ## move to put down areas
     move_to(targets[5], video_getter, mtx, dist, newcameramtx, dim, M, detect)
-    client.publish("IDP_2023_Servo_Horizontal", 0)  
+    client.publish("IDP_2023_Servo_Horizontal", 0)
     client.publish("IDP_2023_Follower_left_speed", -255)
     client.publish("IDP_2023_Follower_right_speed", -255)
     time.sleep(5)
     client.publish("IDP_2023_Follower_left_speed", 0)
     client.publish("IDP_2023_Follower_right_speed", 0)
 
-    move_to(targets[6], video_getter, mtx, dist, newcameramtx, dim, M, detect)
+    move_to(targets[6], video_getter, mtx, dist, newcameramtx, dim, M, detect)"""
     video_getter.stop()
-    
+
+
+def detect_red(frame):
+    "for detecting red cube in an image"
+
+    # TODO: do the processing in particular section of the image
+
+    font = cv2.FONT_HERSHEY_COMPLEX
+
+    # Convert BGR to HSV
+    hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+
+    # define range of blue color in HSV
+
+    lower_red = np.array([130, 100, 100])
+
+    upper_red = np.array([180, 255, 255])
+
+    # Threshold the HSV image to get only blue colours
+    mask = cv2.inRange(hsv, lower_red, upper_red)
+
+    kernel = np.ones((7, 7), np.uint8)
+    mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
+    mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
+
+    # segmented_img = cv2.bitwise_and(frame, frame, mask=mask)
+    contours, hierarchy = cv2.findContours(
+        mask.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
+    )
+    # seg_output = cv2.drawContours(segmented_img, contours, -1, (0, 255, 0),3)
+    # output = cv2.drawContours(frame, contours, -1, (0, 255, 0), 3)
+    centres = []
+    for cont in contours:
+        """if cv2.contourArea(cont) <= 20:
+        continue"""
+        x, y, w, h = cv2.boundingRect(cont)
+        if x < 243 or x > 573 or y < 64 or y > 211:
+            pass
+        else:
+            cv2.rectangle(frame, (x, y), (x + w, y + h), (255, 0, 0))
+            cv2.putText(
+                frame,
+                f"{x}, {y}, {cv2.contourArea(cont)}",
+                (x, y),
+                font,
+                0.5,
+                (255, 0, 0),
+            )
+            cv2.imshow("red", frame)
+            cv2.waitKey()
+            return (x, y)
+
+        centres.append((x, y, w, h))
+
+    dim = frame.shape
+    half = dim[1] * 0.5
+    for x, y, w, h in centres:
+        if True:  # (x < half) and (x > 180):
+            cv2.rectangle(frame, (x, y), (x + w, y + h), (255, 0, 0))
+            cv2.putText(
+                frame,
+                f"{x}, {y}, {cv2.contourArea(cont)}",
+                (x, y),
+                font,
+                0.5,
+                (255, 0, 0),
+            )
+
+    return frame, centres
 
 
 def detect_red_video(frame):
