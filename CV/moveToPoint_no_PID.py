@@ -127,19 +127,12 @@ def perspective_transoformation(img, dim):
     cv2.imshow("img", img)
     cv2.setMouseCallback("img", click_envent)
     key = cv2.waitKey()"""
-    # points = np.float32([[261, 682], [818, 630], [236, 151], [738, 92]])
     # points = np.float32(points)
     points = np.float32([(255, 694), (833, 641), (217, 137), (753, 75)])
     new_points = np.float32([(0, 0), (0, dim[1]), (dim[0], 0), dim])
 
     M = cv2.getPerspectiveTransform(points, new_points)
     return M
-
-
-def forward(time=2):
-    client.publish("IDP_2023_Follower_left_speed", 200)
-    client.publish("IDP_2023_Follower_right_speed", 200)
-    time.sleep(time)
 
 
 def get_points(img):
@@ -160,22 +153,6 @@ def get_points(img):
     points = np.int32(points)
     return points
 
-
-"""def controll():
-    src = "http://localhost:8081/stream/video.mjpeg"
-    video_getter = VideoGet(src).start()
-
-    detector = apriltag.Detector()
-    mtx, dist, newcameramtx, dim = cal.load_vals(6)
-    M = perspective_transoformation(video_getter.frame, dim)
-    mtx, dist, newcameramtx, dim = cal.load_vals(6)
-    current_head = np.float64([1, 0])
-
-    # points = get_points(video_getter.frame)
-    # M = cv2.getPerspectiveTransform(points, new_points)   
-        current_position = np.float64(result[0].center)
-        rotate(video_getter, M, point, detector, mtx, dist, newcameramtx, dim, current_head)
-        forward(2)"""
 
 def on_message(client, userdata, msg):
     global color
@@ -233,7 +210,6 @@ def apriltag_detector_procedure(
         video.release()
 
     video_getter = VideoGet(src).start()
-    # video_shower = VideoShow(video_getter.frame).start()
     try:
         if module is apriltag:
             option = apriltag.DetectorOptions(families="tag36h11")
@@ -262,17 +238,20 @@ def apriltag_detector_procedure(
     frame = video_getter.frame
     frame_copy = frame.copy()
     frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+
     if fix_distortion:
         frame = cv2.undistort(frame, mtx, dist, None, newcameramtx)
 
     if fix_perspective:
         frame = cv2.warpPerspective(frame, M, dim)
+
     global target
     global targets
     global color
     target = None
     targets = []
     color = None
+
     def click_envent(event, x, y, flags, params):
         global targets
         if event == cv2.EVENT_LBUTTONDOWN:
@@ -362,8 +341,6 @@ def apriltag_detector_procedure(
                 break"""
             angle_diff = np.arccos(np.dot(v, heading))
 
-            # print("angle diference: ", angle_diff)
-
             if np.linalg.norm(current_position - target) < 35:
                 client.publish("IDP_2023_Follower_left_speed", 0)
                 client.publish("IDP_2023_Follower_right_speed", 0)
@@ -371,16 +348,15 @@ def apriltag_detector_procedure(
                 if current_target == 1:
                     client.publish("IDP_2023_Servo_Vertical", 0)
                     client.publish("IDP_2023_Servo_Horizontal", 0)
-                    # time.sleep(5)
-
-                if current_target == 2:
+                    time.sleep(5)
+                elif current_target == 2:
                     client.publish("IDP_2023_Servo_Horizontal", 1)
                     time.sleep(2)
                     client.publish("IDP_2023_Servo_Vertical", 1)
                     client.publish("IDP_2023_Set_Block", 1)
-                    time.sleep(3)
                     client.on_message = on_message
                     client.loop_start()
+                    time.sleep(3)
                     while color is None:
                         time.sleep(0.1)
                     if color == 0:
@@ -389,24 +365,24 @@ def apriltag_detector_procedure(
                     elif color == 1:
                         # blue
                         print("blue")
+                    else:
+                        #didn't detect
+                        print("error")
                     client.loop_stop()
                     color = None
-                if current_target == 3:
+                elif current_target == 3:
                     #client.publish("IDP_2023_Set_Ultrasound", 1)
                     client.publish("IDP_2023_Set_Ultrasound", 0)
-
-                if current_target == 4:
+                elif current_target == 4:
                     client.publish("IDP_2023_Set_Ultrasound", 0)
-
-                if current_target == 5:
+                elif current_target == 5:
                     client.publish("IDP_2023_Servo_Vertical", 1)
                     client.publish("IDP_2023_Follower_left_speed", -255)
                     client.publish("IDP_2023_Follower_right_speed", -255)
                     time.sleep(5)
                     client.publish("IDP_2023_Follower_left_speed", 0)
                     client.publish("IDP_2023_Follower_right_speed", 0)
-
-                if current_target == 6:
+                elif current_target == 6:
                     video_getter.stop()
                     break
                 current_target += 1
@@ -414,20 +390,7 @@ def apriltag_detector_procedure(
                 clockwise = False
                 anticlockwise = False
                 moving_forward = False
-            """
-            if (
-                np.linalg.norm(current_position - start_point) / count_average < 0.5
-                and time.time() - time_average > 1
-            ):
-                time_average = time.time()
-                count_average = 0
-                start_point = current_position
-                client.publish("IDP_2023_Follower_left_speed", -250)
-                client.publish("IDP_2023_Follower_right_speed", -250)
-                time.sleep(1)
-                client.publish("IDP_2023_Follower_left_speed", 0)
-                client.publish("IDP_2023_Follower_right_speed", 0)
-            """
+
             if angle_diff < 0.2 or angle_diff > (2 * math.pi) - 0.2:
                 if not moving_forward or last_time - time.time() > 0.5:
                     client.publish("IDP_2023_Follower_left_speed", 255)
@@ -562,8 +525,5 @@ def detect_red_video(frame):
 
 
 if __name__ == "__main__":
-    # main()
-    video = cv2.VideoCapture("http://localhost:8081/stream/video.mjpeg")
-    detect_red_video(video.read()[1].copy())
-    video.release()
-    cv2.destroyAllWindows()
+    main()
+
