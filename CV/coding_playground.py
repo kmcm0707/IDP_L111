@@ -66,7 +66,7 @@ while True:
     # if key == ord("w"):
     if (count % 20) == 0:
         print("captured")
-        cv2.imwrite(f"calib_imgs/img_dump_manual_table3_3/{int(count/20)}.jpg", img)
+        cv2.imwrite(f"calib_imgs/img_dump_manual_table_2/{int(count/20)}.jpg", img)
 
     count += 1
 

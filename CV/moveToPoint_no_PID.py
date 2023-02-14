@@ -238,7 +238,6 @@ def apriltag_detector_procedure(
     current_position = np.array([0, 0])
     first_time = True
     time.sleep(5)
-    frame_copy = frame.copy()
 
     if fix_distortion:
         frame = cv2.undistort(frame, mtx, dist, None, newcameramtx)
@@ -247,8 +246,8 @@ def apriltag_detector_procedure(
         frame = cv2.warpPerspective(frame, M, dim)
 
     # position_red = detect_red(frame)
-    position_red = detect_red(frame)
-    print(position_red)
+    # frame, position_red = detect_red(frame)
+    # print(position_red)
 
     frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
@@ -534,6 +533,9 @@ def detect_red(frame):
                 0.5,
                 (255, 0, 0),
             )
+
+    cv2.imshow("red", frame)
+    cv2.waitKey()
 
     return frame, centres
 
