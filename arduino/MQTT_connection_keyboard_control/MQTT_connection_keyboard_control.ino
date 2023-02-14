@@ -36,9 +36,9 @@ int switch_pin = 0;
 
 int vertical_angle_high = 160; //120?
 int vertical_angle_low = 55;
-int horizontal_angle_high =  100; //95 -- CLOSED
+int horizontal_angle_high =  110; //95 -- CLOSED
 int horizontal_angle_low = 0; // -- OPEN
-int vertical_angle_middle = (vertical_angle_high + vertical_angle_low) / 2;
+int vertical_angle_middle = 150;
 int drop_block_angle = horizontal_angle_high - 20;
 
 UltraSonicDistanceSensor distancesensor(trigPin, echoPin);

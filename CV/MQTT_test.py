@@ -162,6 +162,8 @@ while True:
         close()
     elif key == ord("4"):
         open()
+    elif key == ord("5"):
+        client.publish("IDP_2023_Servo_Vertical", 2)
 
 video.stop()
 cv2.destroyAllWindows()

@@ -287,11 +287,11 @@ def main():
 
     targets = np.array(
         [
-            [734, 560],  # ramp
-            [739, 198],
+            [740, 560],  # ramp
+            [740, 185],
             [410, 128],  # red
-            [93, 223],  # tunnel
-            [91, 531],
+            [76, 216],  # tunnel
+            [73, 531],
             [196, 698],  # not needed
             [403, 712],  # end point
         ]
@@ -312,10 +312,10 @@ def main():
         except:
             print("no red")
 
-        client.publish("IDP_2023_Servo_Horizontal", 1)
+        # client.publish("IDP_2023_Servo_Horizontal", 1)
         # client.publish("IDP_2023_Servo_Vertical", 1)
 
-        move_to(targets[0], video_getter, mtx, dist, newcameramtx, dim, M, detect)
+        """move_to(targets[0], video_getter, mtx, dist, newcameramtx, dim, M, detect)
         move_to(targets[1], video_getter, mtx, dist, newcameramtx, dim, M, detect)
 
         client.publish("IDP_2023_Servo_Vertical", 0)
@@ -351,7 +351,7 @@ def main():
             dim,
             M,
             detect,
-            angle_threshold=0.05,
+            angle_threshold=0.1,
         )
         client.publish("IDP_2023_Servo_Horizontal", 1)
         time.sleep(2)
@@ -376,7 +376,7 @@ def main():
             # didn't detect
             print("error")
         client.loop_stop()
-        color = None
+        color = None"""
 
         ## tunnel
         move_to(targets[3], video_getter, mtx, dist, newcameramtx, dim, M, detect)
@@ -387,7 +387,7 @@ def main():
         ## move to put down areas
         if red:
             targets_red = np.array(
-                [[622, 7114], [635, 804]],
+                [[622, 714], [635, 804]],
             )
             move_to(
                 targets_red[0], video_getter, mtx, dist, newcameramtx, dim, M, detect
