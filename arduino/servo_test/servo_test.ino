@@ -40,7 +40,7 @@ void loop() {
   delay(5000);
   lower_claw();
   open_claw();
-  delay(5000);
+  delay(100000);
 }
 
 void lower_claw(){

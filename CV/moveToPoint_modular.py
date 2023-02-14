@@ -56,6 +56,8 @@ client = mqtt.Client("Python")
 client.connect(mqttBroker)
 client.subscribe("IDP_2023_Color")
 
+global color
+
 
 def on_message(client, userdata, msg):
     global color
@@ -66,7 +68,6 @@ client.on_message = on_message
 
 global target
 global targets
-global color
 
 
 class VideoGet:
@@ -214,6 +215,10 @@ def move_to(
 
             else:
                 if abs(np.dot(u, v)) > 0.1:
+                    """if last_time - time.time() > 0.5:
+                    client.publish("IDP_2023_Follower_left_speed", speed)
+                    client.publish("IDP_2023_Follower_right_speed", speed)
+                    last_time = time.time()"""
                     continue
 
                 direction = (
@@ -282,34 +287,48 @@ def main():
 
     targets = np.array(
         [
-            [734, 560], #ramp
+            [734, 560],  # ramp
             [739, 198],
-            [410, 128], #red
-            [93, 223], # tunnel
+            [410, 128],  # red
+            [93, 223],  # tunnel
             [91, 531],
-            [196, 698], # not needed
-            [403, 712], # end point
+            [196, 698],  # not needed
+            [403, 712],  # end point
         ]
     )
     blocks_collected = 0
+    frame = video_getter.frame
+    frame = cv2.undistort(frame, mtx, dist, None, newcameramtx)
+    dim = (810, 810)
+    M = perspective_transoformation(frame, dim)
     while blocks_collected < 3:
         frame = video_getter.frame
         frame = cv2.undistort(frame, mtx, dist, None, newcameramtx)
         dim = (810, 810)
         M = perspective_transoformation(frame, dim)
         frame = cv2.warpPerspective(frame, M, dim)
-        targets[2] = detect_red(frame)
-        
+        try:
+            targets[2] = detect_red(frame)
+        except:
+            print("no red")
+
         client.publish("IDP_2023_Servo_Horizontal", 1)
-        client.publish("IDP_2023_Servo_Vertical", 1)
+        # client.publish("IDP_2023_Servo_Vertical", 1)
 
         move_to(targets[0], video_getter, mtx, dist, newcameramtx, dim, M, detect)
         move_to(targets[1], video_getter, mtx, dist, newcameramtx, dim, M, detect)
-        
+
         client.publish("IDP_2023_Servo_Vertical", 0)
         client.publish("IDP_2023_Servo_Horizontal", 0)
         time.sleep(5)
         # over the ramp claw down
+        frame = video_getter.frame
+        frame = cv2.undistort(frame, mtx, dist, None, newcameramtx)
+        frame = cv2.warpPerspective(frame, M, dim)
+        try:
+            targets[2] = detect_red(frame)
+        except:
+            print("no red")
         # now moves to red block
         move_to(
             targets[2],
@@ -321,7 +340,7 @@ def main():
             M,
             detect,
             only_rotate=True,
-            angle_threshold=0.2,
+            angle_threshold=0.05,
         )
         move_to(
             targets[2],
@@ -332,16 +351,17 @@ def main():
             dim,
             M,
             detect,
-            angle_threshold=0.2,
+            angle_threshold=0.05,
         )
         client.publish("IDP_2023_Servo_Horizontal", 1)
         time.sleep(2)
-        client.publish("IDP_2023_Servo_Vertical", 1)
+        client.publish("IDP_2023_Servo_Vertical", 2)
         client.publish("IDP_2023_Set_Block", 1)
         client.loop_start()
         time.sleep(3)
         red = False
         blue = False
+        print(color)
         while color is None:
             time.sleep(0.1)
         if color == 0:
@@ -362,17 +382,40 @@ def main():
         move_to(targets[3], video_getter, mtx, dist, newcameramtx, dim, M, detect)
         # client.publish("IDP_2023_Set_Ultrasound", 1)
         move_to(targets[4], video_getter, mtx, dist, newcameramtx, dim, M, detect)
-        client.publish("IDP_2023_Set_Ultrasound", 0)
-
+        # client.publish("IDP_2023_Set_Ultrasound", 0)
+        client.publish("IDP_2023_Servo_Vertical", 3)
         ## move to put down areas
-        if(red):
+        if red:
             targets_red = np.array(
-            [[198, 504], [190, 680], [188, 804]],
+                [[622, 7114], [635, 804]],
             )
-            move_to(targets_red[0], video_getter, mtx, dist, newcameramtx, dim, M, detect)
-            move_to(targets_red[1], video_getter, mtx, dist, newcameramtx, dim, M, detect, only_rotate=True, angle_threshold=0.2,)
-            move_to(targets_red[1], video_getter, mtx, dist, newcameramtx, dim, M, detect)
-            move_to(targets_red[2], video_getter, mtx, dist, newcameramtx, dim, M, detect, only_rotate=True, angle_threshold=0.2,)
+            move_to(
+                targets_red[0], video_getter, mtx, dist, newcameramtx, dim, M, detect
+            )
+            move_to(
+                targets_red[0],
+                video_getter,
+                mtx,
+                dist,
+                newcameramtx,
+                dim,
+                M,
+                detect,
+                only_rotate=True,
+                angle_threshold=0.2,
+            )
+            move_to(
+                targets_red[1],
+                video_getter,
+                mtx,
+                dist,
+                newcameramtx,
+                dim,
+                M,
+                detect,
+                only_rotate=True,
+                angle_threshold=0.2,
+            )
             client.publish("IDP_2023_Servo_Horizontal", 0)
             time.sleep(1)
             client.publish("IDP_2023_Follower_left_speed", -255)
@@ -381,14 +424,37 @@ def main():
             client.publish("IDP_2023_Follower_left_speed", 0)
             client.publish("IDP_2023_Follower_right_speed", 0)
             red = False
-        elif(blue):
+        elif blue:
             targets_blue = np.array(
-            [[198, 504], [190, 680], [188, 804]],
+                [[191, 719], [183, 804]],
             )
-            move_to(targets_blue[0], video_getter, mtx, dist, newcameramtx, dim, M, detect)
-            move_to(targets_blue[1], video_getter, mtx, dist, newcameramtx, dim, M, detect, only_rotate=True, angle_threshold=0.2,)
-            move_to(targets_blue[1], video_getter, mtx, dist, newcameramtx, dim, M, detect)
-            move_to(targets_blue[2], video_getter, mtx, dist, newcameramtx, dim, M, detect, only_rotate=True, angle_threshold=0.2,)
+            move_to(
+                targets_blue[0], video_getter, mtx, dist, newcameramtx, dim, M, detect
+            )
+            move_to(
+                targets_blue[0],
+                video_getter,
+                mtx,
+                dist,
+                newcameramtx,
+                dim,
+                M,
+                detect,
+                only_rotate=True,
+                angle_threshold=0.2,
+            )
+            move_to(
+                targets_blue[1],
+                video_getter,
+                mtx,
+                dist,
+                newcameramtx,
+                dim,
+                M,
+                detect,
+                only_rotate=True,
+                angle_threshold=0.2,
+            )
             client.publish("IDP_2023_Servo_Horizontal", 0)
             time.sleep(1)
             client.publish("IDP_2023_Follower_left_speed", -255)
@@ -397,7 +463,7 @@ def main():
             client.publish("IDP_2023_Follower_left_speed", 0)
             client.publish("IDP_2023_Follower_right_speed", 0)
             blue = False
-        
+
         blocks_collected += 1
 
     move_to(targets[6], video_getter, mtx, dist, newcameramtx, dim, M, detect)
@@ -450,8 +516,8 @@ def detect_red(frame):
                 0.5,
                 (255, 0, 0),
             )
-            cv2.imshow("red", frame)
-            cv2.waitKey()
+            # cv2.imshow("red", frame)
+            # cv2.waitKey()
             return (x, y)
 
         centres.append((x, y, w, h))

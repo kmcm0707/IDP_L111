@@ -30,14 +30,15 @@ const int trigPin = 6;
 const int echoPin = 7;
 int servo_vertical_pin = 9;
 int servo_horizontal_pin = 10;
-int redPin = -1;
-int bluePin = -1;
-int pickedUpPin = -1;
+int motor_LED_pin = 2;
+int colour_pin = 1;
+int switch_pin = 0;
 
-int vertical_angle_high = 125; //120?
-int vertical_angle_low = 25;
-int horizontal_angle_high =  110; //95 -- CLOSED
-int horizontal_angle_low = 30; // -- OPEN
+int vertical_angle_high = 160; //120?
+int vertical_angle_low = 55;
+int horizontal_angle_high =  100; //95 -- CLOSED
+int horizontal_angle_low = 0; // -- OPEN
+int vertical_angle_middle = (vertical_angle_high + vertical_angle_low) / 2;
 int drop_block_angle = horizontal_angle_high - 20;
 
 UltraSonicDistanceSensor distancesensor(trigPin, echoPin);
@@ -91,6 +92,8 @@ void setup() {
   servo_horizontal.attach(servo_horizontal_pin);
   servo_vertical.attach(servo_vertical_pin);
 
+  servo_vertical.write(vertical_angle_high);
+
   // attempt to connect to Wifi network:
   Serial.print("Attempting to connect to SSID: ");
   Serial.println(ssid);
@@ -134,7 +137,9 @@ void setup() {
 
   // topics can be unsubscribed using:
   // mqttClient.unsubscribe(topic);
-
+  pinMode(motor_LED_pin, OUTPUT);
+  pinMode(colour_pin, INPUT);
+  pinMode(switch_pin, INPUT);
   Serial.println();
 }
 
@@ -193,23 +198,25 @@ void loop() {
       m2->setSpeed(rightspeed);
     }
   }
-  if(checkBlock == true){
-    if(digitalRead(pickedUpPin)){
-      if(digitalRead(redPin)){
+  while(checkBlock == true){
+    if(!digitalRead(switch_pin)){
+      if(digitalRead(colour_pin)){
         mqttClient.beginMessage("IDP_2023_Color");
-        mqttClient.print("0");
+        mqttClient.print("0"); //red
         mqttClient.endMessage();
+        checkBlock = false;
       } else {
         mqttClient.beginMessage("IDP_2023_Color");
-        mqttClient.print("1");
+        mqttClient.print("1"); //blue or nothing
         mqttClient.endMessage();
+        checkBlock = false;
       }
     } else {
-      mqttClient.beginMessage("IDP_2023_Color");
-      mqttClient.print("-1");
-      mqttClient.endMessage();
+      move_servo_new(servo_vertical, servo_vertical_pin, vertical_angle_high, vertical_angle_low);
+      move_servo_new(servo_horizontal, servo_horizontal_pin, horizontal_angle_high, horizontal_angle_low);
+      move_servo_new(servo_horizontal, servo_horizontal_pin, horizontal_angle_low, horizontal_angle_high);
+      move_servo_new(servo_vertical, servo_vertical_pin, vertical_angle_low, vertical_angle_middle);
     }
-    checkBlock = false;
   }
   
 }
@@ -241,6 +248,7 @@ void onMqttMessage(int messageSize) {
   Serial.println(speed);
 
   if (current_topic == topic){
+    digitalWrite(motor_LED_pin, HIGH);
     Serial.println("left");
     if(speed > 0){
       m1->run(FORWARD);
@@ -253,7 +261,9 @@ void onMqttMessage(int messageSize) {
     } else {
       m1->setSpeed(speed);
     }
-    
+    if(speed == 0){
+      digitalWrite(motor_LED_pin, LOW);
+    }
   }
   if (current_topic == topic2){
     Serial.println("right");
@@ -272,16 +282,24 @@ void onMqttMessage(int messageSize) {
   }
 
   if (current_topic == vert_servo){
+    digitalWrite(motor_LED_pin, LOW);
     if (speed == 1) {
       // RAISE CLAW
       move_servo_new(servo_vertical, servo_vertical_pin, vertical_angle_low, vertical_angle_high);
     } else if (speed == 0) {
       // LOWER CLAW
       move_servo_new(servo_vertical, servo_vertical_pin, vertical_angle_high, vertical_angle_low);
+    } else if (speed == 2) {
+      // RAISE CLAW HALFWAY
+      move_servo_new(servo_vertical, servo_vertical_pin, vertical_angle_low, vertical_angle_middle);
+    } else if (speed == 3) {
+      // RAISE CLAW FROM HALF TO FULL HEIGHT
+      move_servo_new(servo_vertical, servo_vertical_pin, vertical_angle_middle, vertical_angle_high);
     }
   }
 
   if (current_topic == hori_servo){
+    digitalWrite(motor_LED_pin, LOW);
     if (speed == 1){
       // CLOSE CLAW (low -> high)
       move_servo_new(servo_horizontal, servo_horizontal_pin, horizontal_angle_low, horizontal_angle_high);
