@@ -276,135 +276,131 @@ def main():
 
     video_getter = VideoGet(src).start()
     time.sleep(2)
-    frame = video_getter.frame
-
-    frame = cv2.undistort(frame, mtx, dist, None, newcameramtx)
-
-    dim = (810, 810)
-    M = perspective_transoformation(frame, dim)
-    frame = cv2.warpPerspective(frame, M, dim)
-
-    # cv2.imshow("img", frame)
-    # cv2.setMouseCallback("img", click_envent)
-    # cv2.waitKey()
-    # cv2.destroyAllWindows()
-    print(targets)
-
     option = apriltag.DetectorOptions(families="tag36h11")
     detector = apriltag.Detector(option)
     detect = detector.detect
 
-    """targets = np.array(
-        [
-            [734, 560],
-            [739, 198],
-            [410, 128],
-            [93, 223],
-            [91, 531],
-            [196, 698],
-            [403, 712],
-        ]
-    )"""
-    client.publish("IDP_2023_Servo_Vertical", 1)
     targets = np.array(
-        [[198, 504], [190, 680], [188, 804]],
+        [
+            [734, 560], #ramp
+            [739, 198],
+            [410, 128], #red
+            [93, 223], # tunnel
+            [91, 531],
+            [196, 698], # not needed
+            [403, 712], # end point
+        ]
     )
+    blocks_collected = 0
+    while blocks_collected < 3:
+        frame = video_getter.frame
+        frame = cv2.undistort(frame, mtx, dist, None, newcameramtx)
+        dim = (810, 810)
+        M = perspective_transoformation(frame, dim)
+        frame = cv2.warpPerspective(frame, M, dim)
+        targets[2] = detect_red(frame)
+        
+        client.publish("IDP_2023_Servo_Horizontal", 1)
+        client.publish("IDP_2023_Servo_Vertical", 1)
 
-    """targets[2] = detect_red(frame)
-    client.publish("IDP_2023_Servo_Horizontal", 1)
-    client.publish("IDP_2023_Servo_Vertical", 1)"""
+        move_to(targets[0], video_getter, mtx, dist, newcameramtx, dim, M, detect)
+        move_to(targets[1], video_getter, mtx, dist, newcameramtx, dim, M, detect)
+        
+        client.publish("IDP_2023_Servo_Vertical", 0)
+        client.publish("IDP_2023_Servo_Horizontal", 0)
+        time.sleep(5)
+        # over the ramp claw down
+        # now moves to red block
+        move_to(
+            targets[2],
+            video_getter,
+            mtx,
+            dist,
+            newcameramtx,
+            dim,
+            M,
+            detect,
+            only_rotate=True,
+            angle_threshold=0.2,
+        )
+        move_to(
+            targets[2],
+            video_getter,
+            mtx,
+            dist,
+            newcameramtx,
+            dim,
+            M,
+            detect,
+            angle_threshold=0.2,
+        )
+        client.publish("IDP_2023_Servo_Horizontal", 1)
+        time.sleep(2)
+        client.publish("IDP_2023_Servo_Vertical", 1)
+        client.publish("IDP_2023_Set_Block", 1)
+        client.loop_start()
+        time.sleep(3)
+        red = False
+        blue = False
+        while color is None:
+            time.sleep(0.1)
+        if color == 0:
+            # red
+            print("red")
+            red = True
+        elif color == 1:
+            # blue
+            print("blue")
+            blue = True
+        else:
+            # didn't detect
+            print("error")
+        client.loop_stop()
+        color = None
 
-    move_to(targets[0], video_getter, mtx, dist, newcameramtx, dim, M, detect)
-    move_to(
-        targets[1],
-        video_getter,
-        mtx,
-        dist,
-        newcameramtx,
-        dim,
-        M,
-        detect,
-        only_rotate=True,
-        angle_threshold=0.2,
-    )
-    move_to(targets[1], video_getter, mtx, dist, newcameramtx, dim, M, detect)
-    move_to(
-        targets[2],
-        video_getter,
-        mtx,
-        dist,
-        newcameramtx,
-        dim,
-        M,
-        detect,
-        only_rotate=True,
-        angle_threshold=0.2,
-    )
-    """
-    client.publish("IDP_2023_Servo_Vertical", 0)
-    client.publish("IDP_2023_Servo_Horizontal", 0)
-    time.sleep(5)
-    # over the ramp claw down
-    # now moves to red block
-    move_to(
-        targets[2],
-        video_getter,
-        mtx,
-        dist,
-        newcameramtx,
-        dim,
-        M,
-        detect,
-        only_rotate=True,
-        angle_threshold=0.2,
-    )
-    move_to(
-        targets[2],
-        video_getter,
-        mtx,
-        dist,
-        newcameramtx,
-        dim,
-        M,
-        detect,
-        angle_threshold=0.2,
-    )
-    client.publish("IDP_2023_Servo_Horizontal", 1)
-    time.sleep(2)
-    client.publish("IDP_2023_Servo_Vertical", 1)
-    client.publish("IDP_2023_Set_Block", 1)
-    client.loop_start()
-    time.sleep(3)
-    while color is None:
-        time.sleep(0.1)
-    if color == 0:
-        # red
-        print("red")
-    elif color == 1:
-        # blue
-        print("blue")
-    else:
-        # didn't detect
-        print("error")
-    client.loop_stop()
-    color = None
+        ## tunnel
+        move_to(targets[3], video_getter, mtx, dist, newcameramtx, dim, M, detect)
+        # client.publish("IDP_2023_Set_Ultrasound", 1)
+        move_to(targets[4], video_getter, mtx, dist, newcameramtx, dim, M, detect)
+        client.publish("IDP_2023_Set_Ultrasound", 0)
 
-    ## tunnel
-    move_to(targets[3], video_getter, mtx, dist, newcameramtx, dim, M, detect)
-    # client.publish("IDP_2023_Set_Ultrasound", 1)
-    move_to(targets[4], video_getter, mtx, dist, newcameramtx, dim, M, detect)
-    client.publish("IDP_2023_Set_Ultrasound", 0)
+        ## move to put down areas
+        if(red):
+            targets_red = np.array(
+            [[198, 504], [190, 680], [188, 804]],
+            )
+            move_to(targets_red[0], video_getter, mtx, dist, newcameramtx, dim, M, detect)
+            move_to(targets_red[1], video_getter, mtx, dist, newcameramtx, dim, M, detect, only_rotate=True, angle_threshold=0.2,)
+            move_to(targets_red[1], video_getter, mtx, dist, newcameramtx, dim, M, detect)
+            move_to(targets_red[2], video_getter, mtx, dist, newcameramtx, dim, M, detect, only_rotate=True, angle_threshold=0.2,)
+            client.publish("IDP_2023_Servo_Horizontal", 0)
+            time.sleep(1)
+            client.publish("IDP_2023_Follower_left_speed", -255)
+            client.publish("IDP_2023_Follower_right_speed", -255)
+            time.sleep(5)
+            client.publish("IDP_2023_Follower_left_speed", 0)
+            client.publish("IDP_2023_Follower_right_speed", 0)
+            red = False
+        elif(blue):
+            targets_blue = np.array(
+            [[198, 504], [190, 680], [188, 804]],
+            )
+            move_to(targets_blue[0], video_getter, mtx, dist, newcameramtx, dim, M, detect)
+            move_to(targets_blue[1], video_getter, mtx, dist, newcameramtx, dim, M, detect, only_rotate=True, angle_threshold=0.2,)
+            move_to(targets_blue[1], video_getter, mtx, dist, newcameramtx, dim, M, detect)
+            move_to(targets_blue[2], video_getter, mtx, dist, newcameramtx, dim, M, detect, only_rotate=True, angle_threshold=0.2,)
+            client.publish("IDP_2023_Servo_Horizontal", 0)
+            time.sleep(1)
+            client.publish("IDP_2023_Follower_left_speed", -255)
+            client.publish("IDP_2023_Follower_right_speed", -255)
+            time.sleep(5)
+            client.publish("IDP_2023_Follower_left_speed", 0)
+            client.publish("IDP_2023_Follower_right_speed", 0)
+            blue = False
+        
+        blocks_collected += 1
 
-    ## move to put down areas
-    move_to(targets[5], video_getter, mtx, dist, newcameramtx, dim, M, detect)
-    client.publish("IDP_2023_Servo_Horizontal", 0)
-    client.publish("IDP_2023_Follower_left_speed", -255)
-    client.publish("IDP_2023_Follower_right_speed", -255)
-    time.sleep(5)
-    client.publish("IDP_2023_Follower_left_speed", 0)
-    client.publish("IDP_2023_Follower_right_speed", 0)
-
-    move_to(targets[6], video_getter, mtx, dist, newcameramtx, dim, M, detect)"""
+    move_to(targets[6], video_getter, mtx, dist, newcameramtx, dim, M, detect)
     video_getter.stop()
 
 
