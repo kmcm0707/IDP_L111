@@ -11,10 +11,7 @@ import math
 from threading import Thread
 import calibration_clean as cal
 import paho.mqtt.client as mqtt
-import os
-import json
 
-os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
 # import requests
 from sys import platform
@@ -154,10 +151,11 @@ def move_to(
     encatchment_radius=35,
     speed=255,
     rotate_speed=125,
+    ultra=False,
 ) -> None:
 
     print("hello")
-
+    ultra_time = time.time()
     moving_forward = False
     clockwise = False
     anticlockwise = False
@@ -167,6 +165,9 @@ def move_to(
     # client.publish("IDP_2023_Servo_Horizontal", 1)
     # client.publish("IDP_2023_Servo_Vertical", 1)
     while True:
+        if time.time() - ultra_time > 2 and ultra:
+            client.publish("IDP_2023_Set_Ultrasound", 0)
+            ultra = False
         frame = video_getter.frame
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         frame = cv2.undistort(frame, mtx, dist, None, newcameramtx)
@@ -290,10 +291,13 @@ def main():
             [740, 560],  # ramp
             [740, 185],
             [410, 128],  # red
-            [76, 216],  # tunnel
+            [76, 206],  # tunnel
             [73, 531],
-            [196, 698],  # not needed
-            [403, 712],  # end point
+            [100, 571],  # tunnel
+            [196, 698],  # not needed [191, 719]
+            [408, 564],
+            [413, 748],  # end point
+            [413, 801],  # end point
         ]
     )
     blocks_collected = 0
@@ -301,7 +305,7 @@ def main():
     frame = cv2.undistort(frame, mtx, dist, None, newcameramtx)
     dim = (810, 810)
     M = perspective_transoformation(frame, dim)
-    while blocks_collected < 3:
+    while blocks_collected < 2:
         frame = video_getter.frame
         frame = cv2.undistort(frame, mtx, dist, None, newcameramtx)
         dim = (810, 810)
@@ -312,10 +316,10 @@ def main():
         except:
             print("no red")
 
-        # client.publish("IDP_2023_Servo_Horizontal", 1)
-        # client.publish("IDP_2023_Servo_Vertical", 1)
+        client.publish("IDP_2023_Servo_Horizontal", 1)
+        client.publish("IDP_2023_Servo_Vertical", 2)
 
-        """move_to(targets[0], video_getter, mtx, dist, newcameramtx, dim, M, detect)
+        move_to(targets[0], video_getter, mtx, dist, newcameramtx, dim, M, detect)
         move_to(targets[1], video_getter, mtx, dist, newcameramtx, dim, M, detect)
 
         client.publish("IDP_2023_Servo_Vertical", 0)
@@ -340,7 +344,8 @@ def main():
             M,
             detect,
             only_rotate=True,
-            angle_threshold=0.05,
+            angle_threshold=0.1,
+            rotate_speed=140,
         )
         move_to(
             targets[2],
@@ -352,6 +357,7 @@ def main():
             M,
             detect,
             angle_threshold=0.1,
+            encatchment_radius=40,
         )
         client.publish("IDP_2023_Servo_Horizontal", 1)
         time.sleep(2)
@@ -376,21 +382,40 @@ def main():
             # didn't detect
             print("error")
         client.loop_stop()
-        color = None"""
-
+        color = None
         ## tunnel
+        client.publish("IDP_2023_Servo_Vertical", 2)
         move_to(targets[3], video_getter, mtx, dist, newcameramtx, dim, M, detect)
         # client.publish("IDP_2023_Set_Ultrasound", 1)
-        move_to(targets[4], video_getter, mtx, dist, newcameramtx, dim, M, detect)
+        move_to(
+            targets[4],
+            video_getter,
+            mtx,
+            dist,
+            newcameramtx,
+            dim,
+            M,
+            detect,
+            rotate_speed=140,
+            # ultra=True,
+        )
+        move_to(
+            targets[5],
+            video_getter,
+            mtx,
+            dist,
+            newcameramtx,
+            dim,
+            M,
+            detect,
+            # ultra=True,
+        )
         # client.publish("IDP_2023_Set_Ultrasound", 0)
         client.publish("IDP_2023_Servo_Vertical", 3)
         ## move to put down areas
         if red:
             targets_red = np.array(
-                [[622, 714], [635, 804]],
-            )
-            move_to(
-                targets_red[0], video_getter, mtx, dist, newcameramtx, dim, M, detect
+                [[622, 719], [635, 804]],
             )
             move_to(
                 targets_red[0],
@@ -402,6 +427,16 @@ def main():
                 M,
                 detect,
                 only_rotate=True,
+            )
+            move_to(
+                targets_red[0],
+                video_getter,
+                mtx,
+                dist,
+                newcameramtx,
+                dim,
+                M,
+                detect,
                 angle_threshold=0.2,
             )
             move_to(
@@ -429,7 +464,15 @@ def main():
                 [[191, 719], [183, 804]],
             )
             move_to(
-                targets_blue[0], video_getter, mtx, dist, newcameramtx, dim, M, detect
+                targets_blue[0],
+                video_getter,
+                mtx,
+                dist,
+                newcameramtx,
+                dim,
+                M,
+                detect,
+                only_rotate=True,
             )
             move_to(
                 targets_blue[0],
@@ -440,7 +483,6 @@ def main():
                 dim,
                 M,
                 detect,
-                only_rotate=True,
                 angle_threshold=0.2,
             )
             move_to(
@@ -465,8 +507,19 @@ def main():
             blue = False
 
         blocks_collected += 1
-
-    move_to(targets[6], video_getter, mtx, dist, newcameramtx, dim, M, detect)
+    move_to(targets[7], video_getter, mtx, dist, newcameramtx, dim, M, detect)
+    move_to(targets[8], video_getter, mtx, dist, newcameramtx, dim, M, detect)
+    move_to(
+        targets[9],
+        video_getter,
+        mtx,
+        dist,
+        newcameramtx,
+        dim,
+        M,
+        detect,
+        only_rotate=True,
+    )
     video_getter.stop()
 
 
@@ -516,9 +569,10 @@ def detect_red(frame):
                 0.5,
                 (255, 0, 0),
             )
-            # cv2.imshow("red", frame)
-            # cv2.waitKey()
-            return (x, y)
+            """cv2.imshow("red", frame)
+            cv2.waitKey(1000)
+            cv2.destroyAllWindows()"""
+            return (x, y - 9)
 
         centres.append((x, y, w, h))
 
@@ -593,7 +647,7 @@ def detect_red_video(frame):
     # for stopping the window wont run without it
     # see file docstring for detail
     key = cv2.waitKey(0)
-    return [block_red[0] + block_red[2] / 2, block_red[1] + block_red[3] / 2]
+    return [block_red[0] + block_red[2] / 2, block_red[1] + block_red[3] / 2 - 3]
 
 
 if __name__ == "__main__":
