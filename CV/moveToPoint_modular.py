@@ -384,7 +384,6 @@ def main():
         client.loop_stop()
         color = None
         ## tunnel
-        client.publish("IDP_2023_Servo_Vertical", 2)
         move_to(targets[3], video_getter, mtx, dist, newcameramtx, dim, M, detect)
         # client.publish("IDP_2023_Set_Ultrasound", 1)
         move_to(
