@@ -2,7 +2,6 @@
 # coding: utf-8
 # python 3.9.16
 
-"""Main code for computer vision code for detection for cube, line or ar tag"""
 # Move to point using PID was an attempt to use PID to move to a point
 # This was not used in the final code
 # The PID controller ended up being unreliable it would sometimes work however many times would overshoot the point and have to turn around
@@ -11,6 +10,7 @@
 # This was later fixed by using the angle of the apriltag to calculate the error (which was much more stable) and what we should have used here
 # Because using the angle of the apriltag was accurate enough we did not need to use PID to move to a point
 # So this code was not used in the final code
+
 import sys
 import time
 from threading import Thread
@@ -49,8 +49,6 @@ if "pupil_apriltags" not in sys.modules and "apriltag" not in sys.modules:
 
     raise ModuleNotFoundError("neither apriltag detection module installed")
 
-rightspeed = 0
-leftspeed = 0
 
 # mqttBroker = "broker.hivemq.com"
 # Alternative message brokers:
@@ -321,8 +319,8 @@ class PID:
         self.prev_error = 0
         self.integral = 0
         self.error = 0
-        self.left_speed = 200
-        self.right_speed = 200
+        self.left_speed = 170
+        self.right_speed = 170
         self.current_position = np.array([0, 0])
         self.target_position = np.array([0, 0])
         self.predicted_position = np.array([0, 0])
@@ -344,7 +342,7 @@ class PID:
         self.predicted_position[:] = predicted_position
 
     def PID_controller_update(self):
-        basespeed = 200
+        basespeed = 170
         """This function will return the error for the PID controller"""
         deltaX = self.current_position[0] - self.predicted_position[0]
         deltaY = self.current_position[1] - self.predicted_position[1]
@@ -359,7 +357,7 @@ class PID:
             targetAngle = 0
 
         temp_error = targetAngle - velocityAngle
-        if self.error > math.pi:
+        if temp_error > math.pi or (temp_error < 0 and temp_error > -math.pi):
             # turn right - left faster
             temp_error = -abs(temp_error)
         else:
@@ -387,20 +385,21 @@ class PID:
 
 def start_everything():
     controller = PID()
-    if platform == "darwin":
-        # mac
-        apriltag_detector_procedure(
-            "http://localhost:8081/stream/video.mjpeg",
-            module=apriltag,
-            controller=controller,
-        )
-    elif platform == "win32":
+    if platform == "win32":
         # Windows
         apriltag_detector_procedure(
             "http://localhost:8081/stream/video.mjpeg",
             module=pupil_apriltags,
             controller=controller,
         )
+    else:
+        # mac
+        apriltag_detector_procedure(
+            "http://localhost:8081/stream/video.mjpeg",
+            module=apriltag,
+            controller=controller,
+        )
+    
 
 
 if __name__ == "__main__":
