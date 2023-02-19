@@ -2,9 +2,15 @@
 # coding: utf-8
 # python 3.9.16
 
-"""Main code for computer vision comaints code for detection for cube, line or ar tag
-"""
-
+"""Main code for computer vision code for detection for cube, line or ar tag"""
+# Move to point using PID was an attempt to use PID to move to a point
+# This was not used in the final code
+# The PID controller ended up being unreliable it would sometimes work however many times would overshoot the point and have to turn around
+# This was likely due to an error in detection of angle of apriltag
+# The PID controller here used a predicted velocity point to calculate the error however this was very unstable
+# This was later fixed by using the angle of the apriltag to calculate the error (which was much more stable) and what we should have used here
+# Because using the angle of the apriltag was accurate enough we did not need to use PID to move to a point
+# So this code was not used in the final code
 import sys
 import time
 from threading import Thread
