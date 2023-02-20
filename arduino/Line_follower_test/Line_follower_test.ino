@@ -1,3 +1,7 @@
+/*
+This was the code to test the line followers
+*/
+
 int left_line_follower = 0;
 int right_line_follower = 1;
 

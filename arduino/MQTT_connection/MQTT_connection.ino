@@ -1,3 +1,11 @@
+/*
+  MQTT connection
+
+  This sketch demonstrates the capabilities of the pubsub library in combination
+  with the WiFi shield to subscribe and publish to a server running the Mosquitto
+  MQTT broker.
+
+*/
 #include <ArduinoMqttClient.h>
 #include <WiFiNINA.h>
 // #include "arduino_secrets.h"

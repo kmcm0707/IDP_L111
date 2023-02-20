@@ -1,3 +1,8 @@
+/*
+This was line follower code that we used to control the line followers using PID it is a stripped version of line_follower_new_code as we were attempting to simplify the code.
+We ended up not using line followers as while we managed to get them working reliably and quickly they interfered with the other electronics
+as well as being unneeded in the final design.
+*/
 #include <Wire.h>
 #include <Adafruit_MotorShield.h>
 

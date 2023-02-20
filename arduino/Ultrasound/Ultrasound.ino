@@ -1,3 +1,4 @@
+// Code that was used to test the ultrasound sensor
 #include <HCSR04.h>
 const int trigPin = 6;
 const int echoPin = 7;

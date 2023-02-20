@@ -10,7 +10,9 @@
   created in this sketch.
   This example code is in the public domain.
 */
-
+/*
+We ended up not using the code and instead chose to use MQTT as it was easier to implement and more reliable as well as a similar speed.
+*/
 #include <ArduinoBLE.h>
 
 BLEService ledService("19B10000-E8F2-537E-4F6C-D104768A1214"); // Bluetooth® Low Energy LED Service
