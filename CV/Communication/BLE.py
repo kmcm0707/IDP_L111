@@ -8,6 +8,8 @@
 The script connects to as specified BLE device and receives data through
 notification from Tx characteristic from the BLE device with UART service.
 This data  is the plotted ona live graph.
+
+Overall we chose to use MQTT for the communication over BLE as it was as quick and simple to implement.
 """
 import asyncio
 import time
