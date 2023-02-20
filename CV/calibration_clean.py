@@ -2,9 +2,7 @@
 # coding: utf-8
 # python 3.9.16
 
-"""This file contains functions that are used to calibrate the camera
-
-"""
+"""This file contains functions that are used to calibrate the camera"""
 
 try:
     import cv2
