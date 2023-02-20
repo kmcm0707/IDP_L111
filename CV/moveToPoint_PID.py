@@ -2,8 +2,14 @@
 # coding: utf-8
 # python 3.9.16
 
-"""Main code for computer vision comaints code for detection for cube, line or ar tag
-"""
+# Move to point using PID was an attempt to use PID to move to a point
+# This was not used in the final code
+# The PID controller ended up being unreliable it would sometimes work however many times would overshoot the point and have to turn around
+# This was likely due to an error in detection of angle of apriltag
+# The PID controller here used a predicted velocity point to calculate the error however this was very unstable
+# This was later fixed by using the angle of the apriltag to calculate the error (which was much more stable) and what we should have used here
+# Because using the angle of the apriltag was accurate enough we did not need to use PID to move to a point
+# So this code was not used in the final code
 
 import sys
 import time
@@ -185,13 +191,6 @@ def apriltag_detector_procedure(
             detector = apriltag.Detector(option)
             detect = detector.detect
 
-            def angle(result):
-                v = result.corners[1] - result.corners[0]
-                v = v / np.linalg.norm(v)
-                vertical = np.array([1, 0])
-                angle = np.arccos(np.dot(v, vertical))
-                return angle
-
     except:
         try:
             if module is pupil_apriltags:
@@ -214,6 +213,7 @@ def apriltag_detector_procedure(
     if fix_perspective:
         frame = cv2.warpPerspective(frame, M, dim)
 
+    """Function for clicking on the image to set the target position"""
     def click_envent(event, x, y, flags, params):
         if event == cv2.EVENT_LBUTTONDOWN:
             print(x, y)
@@ -248,13 +248,13 @@ def apriltag_detector_procedure(
                 continue
 
             x, y = result[0].center
-            # theta = angle(result[0])
 
             current_position[:] = [x, y]
             controller.set_current_position(current_position)
 
             positions.append(current_position)
 
+            """PID controller update"""
             interval = time.time() - prev_time
             speed = (result[0].center - prev_point) / interval
             current_position += np.int64(speed * interval * 100)
@@ -307,6 +307,7 @@ def apriltag_detector_procedure(
 
 class PID:
     def __init__(self):
+        """Initialise the PID controller"""
         self.kp = 70
         self.ki = 0.001
         self.kd = 10
@@ -320,6 +321,7 @@ class PID:
         self.predicted_position = np.array([0, 0])
         self.elapsed_time = time.time()
 
+    # Getters and setters
     def get_right_speed(self):
         return self.right_speed
 
@@ -336,8 +338,8 @@ class PID:
         self.predicted_position[:] = predicted_position
 
     def PID_controller_update(self):
-        basespeed = 170
         """This function will return the error for the PID controller"""
+        basespeed = 170
         deltaX = self.current_position[0] - self.predicted_position[0]
         deltaY = self.current_position[1] - self.predicted_position[1]
         targetX = self.current_position[0] - self.target_position[0]
@@ -357,20 +359,24 @@ class PID:
         else:
             # turn left - right faster
             temp_error = abs(temp_error)
-        self.error = temp_error
 
+        # Calculate the error
+        self.error = temp_error
         self.integral = self.integral + self.error
         D = self.error - self.prev_error
         self.prev_error = self.error
 
+        # Calculate the speed of the motors
         motorspeed = int(self.kp * self.error + self.kd * D + self.ki * self.integral)
         self.left_speed = basespeed - motorspeed
         self.right_speed = basespeed + motorspeed
         if time.time() - self.elapsed_time > 0.2:
+            """This is to prevent the code from publishing too many times"""
             self.elapsed_time = time.time()
             self.publish()
 
     def publish(self):
+        """This function will publish the speed of the motors"""
         client.publish("IDP_2023_Follower_left_speed", str(self.left_speed))
         client.publish("IDP_2023_Follower_right_speed", str(self.right_speed))
         print(f"right : {self.right_speed}")
@@ -394,7 +400,5 @@ def start_everything():
             controller=controller,
         )
     
-
-
 if __name__ == "__main__":
     start_everything()
