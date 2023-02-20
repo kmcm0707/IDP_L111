@@ -99,9 +99,11 @@ def perspective_transoformation(img, dim, manual=False):
     """function for manual perspective transformation of an image
     returns the transformation matrix"""
 
+    # for manual selection of points
     points = []
 
     def click_envent(event, x, y, flags, params):
+        # callback function for mouse click
         if event == cv2.EVENT_LBUTTONDOWN:
             print(x, y)
             points.append((x, y))
@@ -127,9 +129,10 @@ def perspective_transoformation(img, dim, manual=False):
 def get_points(img):
     """function for manual perspective transformation of an image
     returns the transformation matrix"""
-    points = []
+    points = []  # points clicked
 
     def click_envent(event, x, y, flags, params):
+        # callback function for mouse click
         if event == cv2.EVENT_LBUTTONDOWN:
             print(x, y)
             cv2.circle(img, (x, y), 2, (0, 0, 255), -1)
@@ -324,17 +327,12 @@ def move_to(
                     - (result[0].corners[0] + result[0].corners[3])
                 ) / 2
 
-                # fmt: off  // this is to stop black from formatting the code
-                if (
-                    (np.float64(direction[0])) * (target[1] - result[0].corners[1][1])
-                    - (
-                        (
-                            np.float64(direction[1])
-                            * (target[0] - result[0].corners[0][0])
-                        )
-                    )
-                ) > 0:
-                    # fmt: on // ignore
+                # fmt: off
+                # check whether the target is to the left or right of the robot
+                if    ((np.float64(direction[0])) * (target[1] - result[0].corners[1][1])
+                    - ((np.float64(direction[1]) * (target[0] - result[0].corners[0][0])))
+                    ) > 0:
+                    # fmt: on
 
                     if not clockwise or time.time() - last_time > 0.5:
                         # rotate clockwise
@@ -345,6 +343,7 @@ def move_to(
                         anticlockwise = False
                         last_time = time.time()
                 else:
+
                     if not anticlockwise or time.time() - last_time > 0.5:
                         # rotate anticlockwise
                         client.publish("IDP_2023_Follower_left_speed", -rotate_speed)

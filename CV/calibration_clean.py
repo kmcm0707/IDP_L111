@@ -16,25 +16,22 @@ except ImportError:
 import glob
 import shutil
 
-# import main
-
+# initialising th eparameter for calibration
 CHECKERBOARD = (7, 6)
-
 objp = np.zeros((1, CHECKERBOARD[0] * CHECKERBOARD[1], 3), np.float32)
-
 objp[0, :, :2] = np.mgrid[0 : CHECKERBOARD[0], 0 : CHECKERBOARD[1]].T.reshape(-1, 2)
 
 # termination criteria
 criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
-# criteria = (cv2.TERM_CRITERIA_EPS+cv2.TERM_CRITERIA_MAX_ITER, 30, 0.1)
-# prepare object points, like (0,0,0), (1,0,0), (2,0,0) ....,(6,5,0)
 
+# flags for chessboard detection
 flags = (
     cv2.CALIB_CB_ADAPTIVE_THRESH
     + cv2.CALIB_CB_FAST_CHECK
     + cv2.CALIB_CB_NORMALIZE_IMAGE
 )
 
+# flags for fisheye calibration
 fish_eyed_flags = (
     cv2.fisheye.CALIB_RECOMPUTE_EXTRINSIC + cv2.fisheye.CALIB_FIX_SKEW
 )  # + cv2.fisheye.CALIB_CHECK_COND
@@ -50,16 +47,6 @@ def process(img, criteria, flags=None):
     """finds corners of chessboard in image, returns the object points and
     images points along with if the corners were found or"""
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-
-    """mask = cv2.inRange(gray, 0, 200)
-    mask = cv2.bitwise_not(mask)
-    kernel = np.ones((7, 7), np.uint8)
-    mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
-    cv2.imshow("mask", mask)
-    cv2.waitKey()"""
-
-    # cv2.imshow("gray", gray)
-    # cv2.waitKey()
 
     # Find the chess board corners
     ret, corners = cv2.findChessboardCorners(gray, (7, 6), flags)
@@ -212,8 +199,19 @@ def sort_img(path_to_imgs, file_ext=".jpg", silent=False):
                 continue
 
 
-def test_cal_val(number=1, alpha=1):
-    "function for testing privious calibration values"
+def test_cal_val(number=6, alpha=1):
+    """function for testing privious calibration values
+
+    Parameters
+    ----------
+    number : int, optional
+        number of calibration data, by default 6
+        6 is the best one
+
+    alpha : float, optional
+        alpha value for undistort function, by default 1
+        when 0 shows no void in undistoreted img
+    """
     mtx = np.fromfile(f"calibration_data/mtx_{number}.dat")
     dist = np.fromfile(f"calibration_data/dist_{number}.dat")
     opt_mtx = np.fromfile(f"calibration_data/opt_mtx_{number}.dat")
@@ -230,15 +228,12 @@ def test_cal_val(number=1, alpha=1):
 
     img = cv2.undistort(img, mtx, dist, None, newcameramtx)
 
-    """x, y, w, h = roi
-    img = img[y : y + h, x : x + w]"""
-
     cv2.imshow("after", img)
     cv2.waitKey()
 
 
 def undistorted_live_feed(num=2):
-    "goves live feed of undistorted image"
+    "gives live feed of undistorted image"
     video = cv2.VideoCapture("http://localhost:8081/stream/video.mjpeg")
 
     ret = False
@@ -252,7 +247,6 @@ def undistorted_live_feed(num=2):
         check, img = video.read()
 
         img = cv2.undistort(img, mtx, dist, None, newcameramtx)
-        # img = main.detect_red(img)
         cv2.imshow("feed", img)
 
         key = cv2.waitKey(1)
@@ -319,7 +313,15 @@ def define_line_manually(img, dim, points_len: int = 8, proportional: bool = Fal
     return points
 
 
-def load_vals(num=2):
+def load_vals(num=6):
+    """function for loading calibration values
+    returns the matrix, distortion coefficients and optimal matrix
+
+    Parameters
+    ----------
+    num : int, optional
+        number of the calibration values to load, by default 6
+    """
     mtx = np.fromfile(f"calibration_data/mtx_{num}.dat")
     dist = np.fromfile(f"calibration_data/dist_{num}.dat")
     opt_mtx = np.fromfile(f"calibration_data/opt_mtx_{num}.dat")
