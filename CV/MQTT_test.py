@@ -1,15 +1,15 @@
 #!../env/bin/python
-import paho.mqtt.client as mqtt
-import time
-from threading import Thread
-import calibration_clean as cal
+# coding: utf-8
 
+"""This is the code for the manual control of the robot using the keyboard. 
+
+It is not used in the final product, but is kept for reference purposes 
+and used to test mechanical components as well as the MQTT push requests."""
+
+from threading import Thread
+import paho.mqtt.client as mqtt
 import cv2
 
-# import keyboard  # pip install keyboard
-import numpy as np
-"""This is the code for the manual control of the robot using the keyboard. 
-It is not used in the final product, but is kept for reference purposes and used to test mechanical components as well as the MQTT push requests."""
 # mqttBroker = "broker.hivemq.com"
 # Alternative message brokers:
 # mqttBroker = "public.mqtthq.com"
@@ -121,6 +121,7 @@ video = VideoGet(
 ).start()
 
 while True:
+    # runs coresponding function when key is pressed
     img = video.frame
     cv2.imshow("img", img)
 
@@ -168,9 +169,3 @@ while True:
 
 video.stop()
 cv2.destroyAllWindows()
-
-"""
-keyboard.on_press_key("w", forward)
-keyboard.on_press_key("s", stop)
-keyboard.on_press_key("a", left)
-keyboard.on_press_key("d", right)"""

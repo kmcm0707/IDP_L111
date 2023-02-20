@@ -17,13 +17,6 @@ from threading import Thread
 import calibration_clean as cal
 import paho.mqtt.client as mqtt
 
-
-# import requests
-from sys import platform
-import math
-
-# import numba
-
 try:
     import cv2
     import numpy as np
@@ -32,8 +25,8 @@ except ImportError:
     print("run 'pip install -r requirements.txt' to install dependencies")
     exit()
 
-"""The following try except statements are used to check if the apriltag detection modules are installed"""
-"""This was done so both windows and mac users could use the code"""
+# The following try except statements are used to check if the apriltag detection modules are installed
+# This was done so both windows and mac users could use the code
 try:
     import apriltag
 except ImportError:
@@ -63,8 +56,9 @@ client.subscribe("IDP_2023_Color")
 
 global color
 
-"""Callback function for when a message is received from the MQTT broker"""
+
 def on_message(client, userdata, msg):
+    """Callback function for when a message is received from the MQTT broker"""
     global color
     color = np.int32(msg.payload.decode())
 
@@ -101,10 +95,11 @@ class VideoGet:
         self.stopped = True
 
 
-def perspective_transoformation(img, dim):
+def perspective_transoformation(img, dim, manual=False):
     """function for manual perspective transformation of an image
     returns the transformation matrix"""
-    """points = []
+
+    points = []
 
     def click_envent(event, x, y, flags, params):
         if event == cv2.EVENT_LBUTTONDOWN:
@@ -115,11 +110,14 @@ def perspective_transoformation(img, dim):
             cv2.destroyAllWindows()
             print(points)
 
-    cv2.imshow("img", img)
-    cv2.setMouseCallback("img", click_envent)
-    key = cv2.waitKey()"""
-    # points = np.float32(points)
-    points = np.float32([(255, 694), (833, 641), (217, 137), (753, 75)])
+    if manual:
+        cv2.imshow("img", img)
+        cv2.setMouseCallback("img", click_envent)
+        cv2.waitKey()
+        points = np.float32(points)
+    else:
+        points = np.float32([(255, 694), (833, 641), (217, 137), (753, 75)])
+
     new_points = np.float32([(0, 0), (0, dim[1]), (dim[0], 0), dim])
 
     M = cv2.getPerspectiveTransform(points, new_points)
@@ -145,6 +143,64 @@ def get_points(img):
     return points
 
 
+def detect_red(frame, show=False):
+    """for detecting red cube in an image
+
+    Parameters
+    ----------
+    frame : numpy.ndarray
+        image to detect red cube in
+    show : bool, optional
+        whether to show the image with the bounding box, by default False
+    """
+
+    font = cv2.FONT_HERSHEY_COMPLEX
+
+    # converting BGR to HSV
+    hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+
+    # defining range of red color in HSV
+    lower_red = np.array([130, 100, 100])
+    upper_red = np.array([180, 255, 255])
+
+    # Threshold the HSV image to get only red colours
+    mask = cv2.inRange(hsv, lower_red, upper_red)
+
+    # removing noise
+    kernel = np.ones((7, 7), np.uint8)
+    mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
+    mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
+
+    # finding contours / group of pixels
+    contours, hierarchy = cv2.findContours(
+        mask.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
+    )
+
+    for cont in contours:
+        x, y, w, h = cv2.boundingRect(cont)
+
+        # only considering ones in the rigon of interest
+        if x < 243 or x > 573 or y < 64 or y > 211:
+            pass
+        else:
+            cv2.rectangle(frame, (x, y), (x + w, y + h), (255, 0, 0))
+            cv2.putText(
+                frame,
+                f"{x}, {y}, {cv2.contourArea(cont)}",
+                (x, y),
+                font,
+                0.5,
+                (255, 0, 0),
+            )
+
+            if show:
+                cv2.imshow("red", frame)
+                cv2.waitKey(1000)
+                cv2.destroyAllWindows()
+
+            return (x, y - 9)
+
+
 def move_to(
     target,
     video_getter,
@@ -161,9 +217,43 @@ def move_to(
     rotate_speed=125,
     ultra=False,
 ) -> None:
-    """Function for moving the robot to a target point"""
-    """First the robot will rotate to face the target point"""
-    """Then the robot will move forward until it is within a certain distance of the target point"""
+    """Function for moving the robot to a target point
+    First the robot will rotate to face the target point
+    Then the robot will move forward until it is within a certain distance of the target point
+
+    Parameters
+    ----------
+    target : np.array
+        The target point to move to
+    video_getter : VideoGet
+        The VideoGet object used to get frames from the camera
+    mtx : np.array
+        The camera matrix
+    dist : np.array
+        The distortion coefficients
+    newcameramtx : np.array
+        The new camera matrix
+    dim : tuple
+        The dimensions of the image
+    M : np.array
+        The transformation matrix
+    detect : function
+        The function used to detect the april tag
+
+    only_rotate : bool, optional
+        If True the robot will only rotate to face the target point, by default False
+    angle_threshold : float, optional
+        The threshold for the angle between the robot and the target point, by default 0.2
+    encatchment_radius : int, optional
+        The radius of the circle around the target point, by default 35
+    speed : int, optional
+        The speed of the robot, by default 255
+    rotate_speed : int, optional
+        The speed of the robot when rotating, by default 125
+    ultra : bool, optional
+        If True the robot will use the ultrasound sensor to detect obstacles, by default False
+    """
+
     print("hello")
     ultra_time = time.time()
     moving_forward = False
@@ -187,13 +277,11 @@ def move_to(
         if len(result) > 0:
 
             current_position[:] = result[0].center
-            # print("target", target)
-            # print("current", current_position)
 
             heading = np.float64(target - current_position)
             heading /= np.linalg.norm(heading)
 
-            """Calculate the angle between the robot rotation and the vector from the robot to the target"""
+            # Calculate the angle between the robot rotation and the vector from the robot to the target
             v = np.float64(result[0].corners[1] - result[0].corners[0])
             v /= np.linalg.norm(v)
             u = np.float64(result[0].corners[2] - result[0].corners[1])
@@ -227,27 +315,29 @@ def move_to(
                     anticlockwise = False
 
             else:
-                """checks if robot is on ramp"""
+                # checks if robot is on ramp
                 if abs(np.dot(u, v)) > 0.1:
-                    """if last_time - time.time() > 0.5:
-                    client.publish("IDP_2023_Follower_left_speed", speed)
-                    client.publish("IDP_2023_Follower_right_speed", speed)
-                    last_time = time.time()"""
                     continue
 
                 direction = (
                     ((result[0].corners[1] + result[0].corners[2]))
                     - (result[0].corners[0] + result[0].corners[3])
                 ) / 2
+
+                # fmt: off  // this is to stop black from formatting the code
                 if (
                     (np.float64(direction[0])) * (target[1] - result[0].corners[1][1])
                     - (
-                        (np.float64(direction[1]))
-                        * (target[0] - result[0].corners[0][0])
+                        (
+                            np.float64(direction[1])
+                            * (target[0] - result[0].corners[0][0])
+                        )
                     )
                 ) > 0:
+                    # fmt: on // ignore
+
                     if not clockwise or time.time() - last_time > 0.5:
-                        """rotate clockwise"""
+                        # rotate clockwise
                         client.publish("IDP_2023_Follower_left_speed", rotate_speed)
                         client.publish("IDP_2023_Follower_right_speed", -rotate_speed)
                         clockwise = True
@@ -256,7 +346,7 @@ def move_to(
                         last_time = time.time()
                 else:
                     if not anticlockwise or time.time() - last_time > 0.5:
-                        """rotate anticlockwise"""
+                        # rotate anticlockwise
                         client.publish("IDP_2023_Follower_left_speed", -rotate_speed)
                         client.publish("IDP_2023_Follower_right_speed", rotate_speed)
                         clockwise = False
@@ -266,26 +356,13 @@ def move_to(
 
 
 def main():
-    """Main function for the robot"""
-    """This function will be called when the program is run"""
-    """It moves the robot to the target points and picks up the cube"""
+    """Main function for the robot
+    This function will be called when the program is run
+    It moves the robot to the target points and picks up the cube"""
     global color
     color = None
     targets = []
 
-    """def click_envent(event, x, y, flags, params):
-        if event == cv2.EVENT_LBUTTONDOWN:
-            print(x, y)
-            target = np.array([x, y])
-            targets.append(target)
-        if len(targets) >= 7:
-            cv2.destroyAllWindows()
-
-        if event == cv2.EVENT_RBUTTONDOWN:
-            print("done")
-            cv2.destroyAllWindows()"""
-
-    path = []
     src = "http://localhost:8081/stream/video.mjpeg"
     mtx, dist, newcameramtx = cal.load_vals(6)
 
@@ -538,132 +615,6 @@ def main():
         only_rotate=True,
     )
     video_getter.stop()
-
-
-def detect_red(frame):
-    "for detecting red cube in an image"
-
-    font = cv2.FONT_HERSHEY_COMPLEX
-
-    # Convert BGR to HSV
-    hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-
-    # define range of red color in HSV
-
-    lower_red = np.array([130, 100, 100])
-
-    upper_red = np.array([180, 255, 255])
-
-    # Threshold the HSV image to get only red colours
-    mask = cv2.inRange(hsv, lower_red, upper_red)
-
-    kernel = np.ones((7, 7), np.uint8)
-    mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
-    mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
-
-    # segmented_img = cv2.bitwise_and(frame, frame, mask=mask)
-    contours, hierarchy = cv2.findContours(
-        mask.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
-    )
-    # seg_output = cv2.drawContours(segmented_img, contours, -1, (0, 255, 0),3)
-    # output = cv2.drawContours(frame, contours, -1, (0, 255, 0), 3)
-    centres = []
-    for cont in contours:
-        """if cv2.contourArea(cont) <= 20:
-        continue"""
-        x, y, w, h = cv2.boundingRect(cont)
-        if x < 243 or x > 573 or y < 64 or y > 211:
-            pass
-        else:
-            cv2.rectangle(frame, (x, y), (x + w, y + h), (255, 0, 0))
-            cv2.putText(
-                frame,
-                f"{x}, {y}, {cv2.contourArea(cont)}",
-                (x, y),
-                font,
-                0.5,
-                (255, 0, 0),
-            )
-            """cv2.imshow("red", frame)
-            cv2.waitKey(1000)
-            cv2.destroyAllWindows()"""
-            return (x, y - 9)
-
-        centres.append((x, y, w, h))
-
-    dim = frame.shape
-    half = dim[1] * 0.5
-    for x, y, w, h in centres:
-        if True:  # (x < half) and (x > 180):
-            cv2.rectangle(frame, (x, y), (x + w, y + h), (255, 0, 0))
-            cv2.putText(
-                frame,
-                f"{x}, {y}, {cv2.contourArea(cont)}",
-                (x, y),
-                font,
-                0.5,
-                (255, 0, 0),
-            )
-
-    return frame, centres
-
-
-def detect_red_video(frame):
-    "detecting red cube in video and draws rectangle around it"
-    "not used in final code"
-
-    # conveting from RGB to HSV
-    hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-
-    # red threshold values
-    lower_red = np.array([130, 100, 100])
-    upper_red = np.array([180, 255, 255])
-
-    # one is ranges shows up white and else in black
-    mask = cv2.inRange(hsv, lower_red, upper_red)
-
-    # noise reduction
-    kernel = np.ones((7, 7), np.uint8)
-    mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
-    mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
-
-    # finding contours
-    contours, hierarchy = cv2.findContours(
-        mask.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
-    )
-
-    # drawing rectangles
-    centres = []
-    for cont in contours:
-        if cv2.contourArea(cont) <= 50:
-            continue
-        x, y, w, h = cv2.boundingRect(cont)
-        # if (x < 243  or x > 573 or y < 64 or y > 211):
-        #   continue
-        centres.append((x, y, w, h))
-    font = cv2.FONT_HERSHEY_COMPLEX
-    block_red = None
-    dim = frame.shape
-    half = dim[1] * 0.5
-    for x, y, w, h in centres:
-        if (x < half) and (x > 180):
-            cv2.rectangle(frame, (x, y), (x + w, y + h), (255, 0, 0))
-            cv2.putText(
-                frame,
-                f"{x}, {y}, {cv2.contourArea(cont)}",
-                (x, y),
-                font,
-                0.5,
-                (255, 0, 0),
-            )
-            block_red = (x, y, w, h)
-    print(block_red)
-    # showing the feed with rectangles
-    cv2.imshow("frame", frame)
-    # for stopping the window wont run without it
-    # see file docstring for detail
-    key = cv2.waitKey(0)
-    return [block_red[0] + block_red[2] / 2, block_red[1] + block_red[3] / 2 - 3]
 
 
 if __name__ == "__main__":
