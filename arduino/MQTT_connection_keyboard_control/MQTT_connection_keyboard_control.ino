@@ -1,3 +1,7 @@
+/*
+This was the final code used in the final robot.
+It implements the servo, ultrasound (unused in the end) and motor control all from the MQTT connection.
+*/
 #include <ArduinoMqttClient.h>
 #include <WiFiNINA.h>
 #include <Adafruit_MotorShield.h>
@@ -19,6 +23,7 @@ MqttClient mqttClient(wifiClient);
 const char broker[] = "test.mosquitto.org";
 int        port     = 1883;
 
+//topics to control the robot
 String topic  = "IDP_2023_Follower_left_speed";
 String topic2  = "IDP_2023_Follower_right_speed";
 String vert_servo = "IDP_2023_Servo_Vertical";
@@ -26,6 +31,7 @@ String hori_servo = "IDP_2023_Servo_Horizontal";
 String set_Ultra = "IDP_2023_Set_Ultrasound";
 String set_BlockCheck = "IDP_2023_Set_Block";
 
+//pins
 const int trigPin = 6;
 const int echoPin = 7;
 int servo_vertical_pin = 9;
@@ -34,6 +40,7 @@ int motor_LED_pin = 2;
 int colour_pin = 1;
 int switch_pin = 0;
 
+//servo angles
 int vertical_angle_high = 160; //120?
 int vertical_angle_low = 55;
 int horizontal_angle_high =  110; //95 -- CLOSED
@@ -41,6 +48,7 @@ int horizontal_angle_low = 0; // -- OPEN
 int vertical_angle_middle = 150;
 int drop_block_angle = horizontal_angle_high - 20;
 
+//ultrasound
 UltraSonicDistanceSensor distancesensor(trigPin, echoPin);
 bool enable_Ultrasound = false;
 
@@ -146,6 +154,7 @@ void setup() {
 void loop() {
   // call poll() regularly to allow the library to receive MQTT messages and
   // send MQTT keep alive which avoids being disconnected by the broker
+  // ultra sound PID controller
   int error = 0; //error - turn left is +ve ,  turn right is -ve
   int last_error = 0;
   int I = 0;
@@ -155,6 +164,7 @@ void loop() {
   const float k_d = 10;
   mqttClient.poll();
   while(distancesensor.measureDistanceCm() < 30 && enable_Ultrasound){
+    // ultra sound PID controller
     mqttClient.poll();
     error = -(7.53 - distancesensor.measureDistanceCm()); 
     I = I + error;
@@ -190,7 +200,7 @@ void loop() {
       }
     }
     if(leftspeed > 0 && leftspeed < 255) {
-      m1->run(FORWARD);
+      m1->run(FORWARD); 
       m1->setSpeed(leftspeed);
     }
     if(rightspeed > 0 && rightspeed < 255){
@@ -199,6 +209,7 @@ void loop() {
     }
   }
   while(checkBlock == true){
+    // check if block is red or blue
     if(!digitalRead(switch_pin)){
       if(digitalRead(colour_pin)){
         mqttClient.beginMessage("IDP_2023_Color");
@@ -212,6 +223,7 @@ void loop() {
         checkBlock = false;
       }
     } else {
+      // if switch is not pressed, open claw to drop block and then pick up again (to change angle of block)
       move_servo_new(servo_vertical, servo_vertical_pin, vertical_angle_high, vertical_angle_low);
       move_servo_new(servo_horizontal, servo_horizontal_pin, horizontal_angle_high, horizontal_angle_low);
       move_servo_new(servo_horizontal, servo_horizontal_pin, horizontal_angle_low, horizontal_angle_high);
@@ -247,6 +259,7 @@ void onMqttMessage(int messageSize) {
   }*/
   Serial.println(speed);
 
+  // CONTROL MOTORS
   if (current_topic == topic){
     digitalWrite(motor_LED_pin, HIGH);
     Serial.println("left");
@@ -356,6 +369,7 @@ void onMqttMessage(int messageSize) {
 
   */
 
+  // ULTRASOUND Enable
   if (current_topic == set_Ultra){
     if(speed == 1){
       enable_Ultrasound = true;
@@ -364,6 +378,7 @@ void onMqttMessage(int messageSize) {
     }
   }
 
+  // BLOCK CHECK
   if (current_topic == set_BlockCheck){
     if(speed == 1){
       checkBlock = true;

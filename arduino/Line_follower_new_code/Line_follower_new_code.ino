@@ -1,3 +1,8 @@
+/*
+This was the line follower code that we used to control the line followers using PID.
+We ended up not using line followers as while we managed to get them working reliably and quickly they interfered with the other electronics
+as well as being unneeded in the final design.
+*/
 #include <Wire.h>
 #include <Adafruit_MotorShield.h>
 #include "utility/Adafruit_MS_PWMServoDriver.h"

@@ -1,3 +1,6 @@
+//code that was used to test how quicjly the arduino could call a get request from a server hosted on a laptop
+//ended up being too slow to be useful
+
 #include <ArduinoJson.h>
 #include <SPI.h>
 #include <WiFiNINA.h>

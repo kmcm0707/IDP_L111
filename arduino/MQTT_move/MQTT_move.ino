@@ -1,3 +1,6 @@
+/*
+Code that was used to check how quick the arduino would respond to a message from the broker.
+*/
 #include <ArduinoMqttClient.h>
 #include <WiFiNINA.h>
 #include <Adafruit_MotorShield.h>

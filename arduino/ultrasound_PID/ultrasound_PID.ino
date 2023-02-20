@@ -1,3 +1,4 @@
+// Code that was used to test the Ultrasound PID controller
 #include <HCSR04.h>
 #include <Wire.h>
 #include <Adafruit_MotorShield.h>
@@ -21,9 +22,9 @@ void setup() {
   }// Starts the serial communication
 }
 void loop() {
-  line_follower();
+  ultrasound_follower();
 }
-void line_follower(){
+void ultrasound_follower(){
   m1->run(FORWARD);
   m2->run(FORWARD);
   int error = 0; //error - turn left is +ve ,  turn right is -ve
