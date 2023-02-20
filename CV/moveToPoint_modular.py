@@ -2,10 +2,12 @@
 # coding: utf-8
 # python 3.9.16
 
-"""Main code for computer vision code for detection for cube, line or ar tag"""
-"""This is the code that was used for the competition"""
-"""It is a modular version of moveToPoint_no_PID.py"""
-"""Classes were used to make the code more testable and determine where errors were occuring"""
+"""This file is the main code responsible for navigation of the robot.
+
+This is the code that was used for the competition
+It is a modular version of moveToPoint_no_PID.py
+Classes were used to make the code more testable and determine where errors were occuring
+"""
 
 import sys
 import time

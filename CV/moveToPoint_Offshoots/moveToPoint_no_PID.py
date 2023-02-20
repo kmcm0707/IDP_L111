@@ -2,7 +2,12 @@
 # coding: utf-8
 # python 3.9.16
 
-"""Main code for computer vision code for detection for cube, line or ar tag"""
+"""This file is a protopye for controlling the robot using more simple method of moving string and rotating
+
+This file was not used in the final code but provided a basic framework for the final code
+so this code can do the same thing as the final code, except you cant specify the parameters
+like encatchment area, angle_threshold, etc.
+"""
 
 import sys
 import time

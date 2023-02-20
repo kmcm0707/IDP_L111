@@ -2,14 +2,15 @@
 # coding: utf-8
 # python 3.9.16
 
-# Move to point using PID was an attempt to use PID to move to a point
-# This was not used in the final code
-# The PID controller ended up being unreliable it would sometimes work however many times would overshoot the point and have to turn around
-# This was likely due to an error in detection of angle of apriltag
-# The PID controller here used a predicted velocity point to calculate the error however this was very unstable
-# This was later fixed by using the angle of the apriltag to calculate the error (which was much more stable) and what we should have used here
-# Because using the angle of the apriltag was accurate enough we did not need to use PID to move to a point
-# So this code was not used in the final code
+"""Move to point using PID was an attempt to use PID to move to a point
+
+This was not used in the final code
+The PID controller ended up being unreliable it would sometimes work however many times would overshoot the point and have to turn around
+This was likely due to an error in detection of angle of apriltag
+The PID controller here used a predicted velocity point to calculate the error however this was very unstable
+This was later fixed by using the angle of the apriltag to calculate the error (which was much more stable) and what we should have used here
+Because using the angle of the apriltag was accurate enough we did not need to use PID to move to a point
+So this code was not used in the final code"""
 
 import sys
 import time
@@ -214,6 +215,7 @@ def apriltag_detector_procedure(
         frame = cv2.warpPerspective(frame, M, dim)
 
     """Function for clicking on the image to set the target position"""
+
     def click_envent(event, x, y, flags, params):
         if event == cv2.EVENT_LBUTTONDOWN:
             print(x, y)
@@ -399,6 +401,7 @@ def start_everything():
             module=apriltag,
             controller=controller,
         )
-    
+
+
 if __name__ == "__main__":
     start_everything()
