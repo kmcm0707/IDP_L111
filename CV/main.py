@@ -11,6 +11,7 @@ from threading import Thread
 import calibration_clean as cal
 import os
 import json
+import glob
 from sys import platform
 import math
 
@@ -168,7 +169,9 @@ def detect_red(frame):
     dim = frame.shape
     half = dim[1] * 0.5
     for x, y, w, h in centres:
-        if True:  # (x < half) and (x > 180):
+        if x < 243 or x > 573 or y < 64 or y > 211:
+            pass
+        else:
             cv2.rectangle(frame, (x, y), (x + w, y + h), (255, 0, 0))
             cv2.putText(
                 frame,
@@ -332,13 +335,14 @@ def detect_apriltag_stream_apriltag(video):
     detector = apriltag.Detector(option)
     while True:
         ret, frame = video.read()
-        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         if not ret:
-            print("video not ret")
-            return
+            continue
 
-        result = detector.detect(frame)
-        print(result)
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        result = detector.detect(gray)
+        if len(result) > 0:
+            print(result[0].center)
+            cv2.polylines(frame, [np.int32(result[0].corners)], True, (0, 255, 0), 2)
 
         cv2.imshow("frame", frame)
         key = cv2.waitKey(1)
@@ -606,11 +610,10 @@ if __name__ == "__main__":
     detect_line(img)"""
 
     # For blocks
-    video = cv2.VideoCapture("http://localhost:8081/stream/video.mjpeg")
-    while True:
-        ret, img = video.read()
-        if not ret:
-            continue
+    # video = cv2.VideoCapture("http://localhost:8081/stream/video.mjpeg")
+    images = glob.glob("calib_imgs/test_imgs/*.png")
+    for fname in images:
+        img = cv2.imread(fname)
         img = cal.undistort_frame(img)
         dim = (810, 810)
         M = perspective_transoformation(img, dim)
