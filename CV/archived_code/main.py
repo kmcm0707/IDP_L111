@@ -598,18 +598,15 @@ def apriltag_detector_procedure(
 if __name__ == "__main__":
     # apriltag_detector_procedure(0, fix_distortion=False, fix_perspective=False)
     if platform == "darwin":
-        # os.system("python " + "../server/app.py &")
         # mac
         apriltag_detector_procedure(
-            # "http://localhost:8081/stream/video.mjpeg",
-            1,
+            "http://localhost:8081/stream/video.mjpeg",
             module=apriltag,
             fix_distortion=False,
             fix_perspective=False,
         )
     elif platform == "win32":
         # Windows
-        # os.system("start /b python ../server/app.py")
         apriltag_detector_procedure(
             "http://localhost:8081/stream/video.mjpeg",
             module=pupil_apriltags,
