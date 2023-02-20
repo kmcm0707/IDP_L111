@@ -8,7 +8,8 @@ import cv2
 
 # import keyboard  # pip install keyboard
 import numpy as np
-
+"""This is the code for the manual control of the robot using the keyboard. 
+It is not used in the final product, but is kept for reference purposes and used to test mechanical components as well as the MQTT push requests."""
 # mqttBroker = "broker.hivemq.com"
 # Alternative message brokers:
 # mqttBroker = "public.mqtthq.com"
