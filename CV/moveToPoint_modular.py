@@ -254,6 +254,7 @@ def move_to(
         If True the robot will use the ultrasound sensor to detect obstacles, by default False
     """
 
+    """Initialising variables"""
     print("hello")
     ultra_time = time.time()
     moving_forward = False
@@ -381,6 +382,7 @@ def main():
     detector = apriltag.Detector(option)
     detect = detector.detect
 
+    """Set of target points for the robot to move to"""
     targets = np.array(
         [
             [740, 560],  # ramp
@@ -400,7 +402,9 @@ def main():
     frame = cv2.undistort(frame, mtx, dist, None, newcameramtx)
     dim = (810, 810)
     M = perspective_transoformation(frame, dim)
+    """While the robot has not collected 2 blocks"""
     while blocks_collected < 2:
+        """Get the frame from the video feed"""
         frame = video_getter.frame
         frame = cv2.undistort(frame, mtx, dist, None, newcameramtx)
         dim = (810, 810)
@@ -411,16 +415,19 @@ def main():
         except:
             print("no red")
 
+        """Lifts and closes the claw"""
         client.publish("IDP_2023_Servo_Horizontal", 1)
         client.publish("IDP_2023_Servo_Vertical", 2)
 
+        """Moves to the ramp and goes over it"""
         move_to(targets[0], video_getter, mtx, dist, newcameramtx, dim, M, detect)
         move_to(targets[1], video_getter, mtx, dist, newcameramtx, dim, M, detect)
 
+        """lowers the claw and opens it"""
         client.publish("IDP_2023_Servo_Vertical", 0)
         client.publish("IDP_2023_Servo_Horizontal", 0)
         time.sleep(5)
-        # over the ramp claw down
+        # detects the red block
         frame = video_getter.frame
         frame = cv2.undistort(frame, mtx, dist, None, newcameramtx)
         frame = cv2.warpPerspective(frame, M, dim)
@@ -429,6 +436,7 @@ def main():
         except:
             print("no red")
         # now moves to red block
+        # a rotate only is added to make sure the robot is facing the block and make it more accurate
         move_to(
             targets[2],
             video_getter,
@@ -439,7 +447,7 @@ def main():
             M,
             detect,
             only_rotate=True,
-            angle_threshold=0.1,
+            angle_threshold=0.1, ## more precise
             rotate_speed=140,
         )
         move_to(
@@ -451,13 +459,19 @@ def main():
             dim,
             M,
             detect,
-            angle_threshold=0.1,
-            encatchment_radius=40,
+            angle_threshold=0.1, ## more precise
+            encatchment_radius=40, ## larger radius so can actually catch the block
         )
+
+        ## close claw
         client.publish("IDP_2023_Servo_Horizontal", 1)
         time.sleep(2)
+
+        ## lifts claw to middle position (so can fit through tunnel) and tells arduino to detect color
         client.publish("IDP_2023_Servo_Vertical", 2)
         client.publish("IDP_2023_Set_Block", 1)
+
+        ## wait for color to be detected and message to be sent from arduino
         client.loop_start()
         time.sleep(3)
         red = False
@@ -478,6 +492,7 @@ def main():
             print("error")
         client.loop_stop()
         color = None
+
         ## tunnel
         move_to(targets[3], video_getter, mtx, dist, newcameramtx, dim, M, detect)
         # client.publish("IDP_2023_Set_Ultrasound", 1)
@@ -504,9 +519,11 @@ def main():
             detect,
             # ultra=True,
         )
+
         # client.publish("IDP_2023_Set_Ultrasound", 0)
+        """Lifts claw fully"""
         client.publish("IDP_2023_Servo_Vertical", 3)
-        ## move to put down areas
+        ## move to put down areas and rotate to face the correct direction
         if red:
             targets_red = np.array(
                 [[622, 719], [635, 804]],
@@ -545,8 +562,10 @@ def main():
                 only_rotate=True,
                 angle_threshold=0.2,
             )
+            """Opens claw to drop block"""
             client.publish("IDP_2023_Servo_Horizontal", 0)
             time.sleep(1)
+            """reverse to get out of the way"""
             client.publish("IDP_2023_Follower_left_speed", -255)
             client.publish("IDP_2023_Follower_right_speed", -255)
             time.sleep(5)
@@ -591,8 +610,10 @@ def main():
                 only_rotate=True,
                 angle_threshold=0.2,
             )
+            """Opens claw to drop block"""
             client.publish("IDP_2023_Servo_Horizontal", 0)
             time.sleep(1)
+            """reverse to get out of the way"""
             client.publish("IDP_2023_Follower_left_speed", -255)
             client.publish("IDP_2023_Follower_right_speed", -255)
             time.sleep(5)
@@ -601,8 +622,10 @@ def main():
             blue = False
 
         blocks_collected += 1
+    """Finished so moves to the end zone"""
     move_to(targets[7], video_getter, mtx, dist, newcameramtx, dim, M, detect)
     move_to(targets[8], video_getter, mtx, dist, newcameramtx, dim, M, detect)
+    """Rotates so fully in the end zone"""
     move_to(
         targets[9],
         video_getter,
@@ -615,6 +638,8 @@ def main():
         only_rotate=True,
     )
     video_getter.stop()
+
+    ## All done
 
 
 if __name__ == "__main__":
