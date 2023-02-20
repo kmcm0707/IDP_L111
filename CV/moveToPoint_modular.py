@@ -402,6 +402,7 @@ def main():
     frame = cv2.undistort(frame, mtx, dist, None, newcameramtx)
     dim = (810, 810)
     M = perspective_transoformation(frame, dim)
+    
     """While the robot has not collected 2 blocks"""
     while blocks_collected < 2:
         """Get the frame from the video feed"""
