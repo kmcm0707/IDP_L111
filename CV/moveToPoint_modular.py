@@ -5,7 +5,8 @@
 """Main code for computer vision code for detection for cube, line or ar tag"""
 """This is the code that was used for the competition"""
 """It is a modular version of moveToPoint_no_PID.py"""
-"""Classes were used to make the code more testable and determine where errors were occuring"""
+"""Separate control and move were used to make the code more testable and determine where errors were occurring"""
+"""All code in moveToPoint offshoots folders were earlier or different versions of this code that were not used in the competition"""
 
 import sys
 import time
@@ -29,6 +30,8 @@ except ImportError:
     print("run 'pip install -r requirements.txt' to install dependencies")
     exit()
 
+"""The following try except statements are used to check if the apriltag detection modules are installed"""
+"""This was done so both windows and mac users could use the code"""
 try:
     import apriltag
 except ImportError:
@@ -46,6 +49,7 @@ if "pupil_apriltags" not in sys.modules and "apriltag" not in sys.modules:
     raise ModuleNotFoundError("neither apriltag detection module installed")
 
 
+"""The following code is used to connect to the MQTT broker"""
 # mqttBroker = "broker.hivemq.com"
 # Alternative message brokers:
 # mqttBroker = "public.mqtthq.com"
@@ -57,7 +61,7 @@ client.subscribe("IDP_2023_Color")
 
 global color
 
-
+"""Callback function for when a message is received from the MQTT broker"""
 def on_message(client, userdata, msg):
     global color
     color = np.int32(msg.payload.decode())
@@ -155,7 +159,9 @@ def move_to(
     rotate_speed=125,
     ultra=False,
 ) -> None:
-
+    """Function for moving the robot to a target point"""
+    """First the robot will rotate to face the target point"""
+    """Then the robot will move forward until it is within a certain distance of the target point"""
     print("hello")
     ultra_time = time.time()
     moving_forward = False
@@ -185,6 +191,7 @@ def move_to(
             heading = np.float64(target - current_position)
             heading /= np.linalg.norm(heading)
 
+            """Calculate the angle between the robot rotation and the vector from the robot to the target"""
             v = np.float64(result[0].corners[1] - result[0].corners[0])
             v /= np.linalg.norm(v)
             u = np.float64(result[0].corners[2] - result[0].corners[1])
@@ -198,6 +205,7 @@ def move_to(
                 print("done")
                 break
 
+            """if the robot is facing the target point"""
             if (
                 angle_diff < angle_threshold
                 or angle_diff > (2 * math.pi) - angle_threshold
@@ -217,6 +225,7 @@ def move_to(
                     anticlockwise = False
 
             else:
+                """checks if robot is on ramp"""
                 if abs(np.dot(u, v)) > 0.1:
                     """if last_time - time.time() > 0.5:
                     client.publish("IDP_2023_Follower_left_speed", speed)
@@ -236,6 +245,7 @@ def move_to(
                     )
                 ) > 0:
                     if not clockwise or time.time() - last_time > 0.5:
+                        """rotate clockwise"""
                         client.publish("IDP_2023_Follower_left_speed", rotate_speed)
                         client.publish("IDP_2023_Follower_right_speed", -rotate_speed)
                         clockwise = True
@@ -244,6 +254,7 @@ def move_to(
                         last_time = time.time()
                 else:
                     if not anticlockwise or time.time() - last_time > 0.5:
+                        """rotate anticlockwise"""
                         client.publish("IDP_2023_Follower_left_speed", -rotate_speed)
                         client.publish("IDP_2023_Follower_right_speed", rotate_speed)
                         clockwise = False
@@ -253,6 +264,9 @@ def move_to(
 
 
 def main():
+    """Main function for the robot"""
+    """This function will be called when the program is run"""
+    """It moves the robot to the target points and picks up the cube"""
     global color
     color = None
     targets = []
@@ -527,20 +541,18 @@ def main():
 def detect_red(frame):
     "for detecting red cube in an image"
 
-    # TODO: do the processing in particular section of the image
-
     font = cv2.FONT_HERSHEY_COMPLEX
 
     # Convert BGR to HSV
     hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 
-    # define range of blue color in HSV
+    # define range of red color in HSV
 
     lower_red = np.array([130, 100, 100])
 
     upper_red = np.array([180, 255, 255])
 
-    # Threshold the HSV image to get only blue colours
+    # Threshold the HSV image to get only red colours
     mask = cv2.inRange(hsv, lower_red, upper_red)
 
     kernel = np.ones((7, 7), np.uint8)
@@ -596,6 +608,7 @@ def detect_red(frame):
 
 def detect_red_video(frame):
     "detecting red cube in video and draws rectangle around it"
+    "not used in final code"
 
     # conveting from RGB to HSV
     hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
