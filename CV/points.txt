@@ -1,3 +1,4 @@
+# Record of Points that were stored to attempt to be used in the competition 
 [738, 601],[737, 117]
 (255, 694), (833, 641), (217, 137), (753, 75)]
 array([732, 592]), array([737, 142]), array([739, 142]), array([480, 142])]

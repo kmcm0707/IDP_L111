@@ -2,6 +2,7 @@
 # coding: utf-8
 # python 3.9.16
 
+"""Code to record points of the board"""
 import cv2
 import numpy as np
 import time
