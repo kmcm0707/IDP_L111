@@ -2,7 +2,9 @@ from flask import Flask, jsonify
 import json
 import time
 from threading import Thread
-
+"""An attempt to use flask to create a webserver to control the robot.
+This was not used as it was too slow and not reliable enough to be used in the final product.
+It was probably due to the fact that the server was running on the same code as the openCV code, which was not ideal."""
 # import requests
 import cv2
 
