@@ -112,8 +112,6 @@ def open():
 client.publish("IDP_2023_Follower_left_speed", "211")
 client.publish("IDP_2023_Follower_right_speed", "211")
 
-"""img = cv2.imread("calib_imgs/img_dump_manual_table3_2/0.jpg")
-cv2.imshow("img", img)"""
 
 video = VideoGet(
     # "http://localhost:8081/stream/video.mjpeg"
@@ -158,12 +156,16 @@ while True:
 
     elif key == ord("1"):
         up()
+
     elif key == ord("2"):
         down()
+
     elif key == ord("3"):
         close()
+
     elif key == ord("4"):
         open()
+
     elif key == ord("5"):
         client.publish("IDP_2023_Servo_Vertical", 2)
 

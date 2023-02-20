@@ -16,7 +16,7 @@ except ImportError:
 import glob
 import shutil
 
-# initialising th eparameter for calibration
+# initialising the parameter for calibration
 CHECKERBOARD = (7, 6)
 objp = np.zeros((1, CHECKERBOARD[0] * CHECKERBOARD[1], 3), np.float32)
 objp[0, :, :2] = np.mgrid[0 : CHECKERBOARD[0], 0 : CHECKERBOARD[1]].T.reshape(-1, 2)
@@ -45,7 +45,8 @@ objpoints = []
 
 def process(img, criteria, flags=None):
     """finds corners of chessboard in image, returns the object points and
-    images points along with if the corners were found or"""
+    images points along with if the corners were found or not
+    """
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
     # Find the chess board corners
@@ -63,12 +64,15 @@ def process(img, criteria, flags=None):
 
 
 def fish_eye_calibration(objpoints, imgpoints, shape):
-    "not curretly in use, fixes distortion for fisheyed lense"
+    "not curretly in use, fixes distortion for fisheyed lens"
+
+    # initialising values used for calibration
     N_OK = len(objpoints)
     mtx = np.zeros((3, 3))
     dist = np.zeros((4, 1))
     rvecs = [np.zeros((1, 1, 3), dtype=np.float64) for i in range(N_OK)]
     tvecs = [np.zeros((1, 1, 3), dtype=np.float64) for i in range(N_OK)]
+
     rms, _, _, _, _ = cv2.fisheye.calibrate(
         objpoints,
         imgpoints,
@@ -81,6 +85,7 @@ def fish_eye_calibration(objpoints, imgpoints, shape):
         fish_eyed_flags,
         (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 1e-6),
     )
+
     print("Found " + str(N_OK) + " valid images for calibration")
     print("DIM=" + str(shape[::-1]))
     print("K=np.array(" + str(mtx.tolist()) + ")")
@@ -97,7 +102,9 @@ def fish_eye_calibration(objpoints, imgpoints, shape):
 
 def general_calibration(objpoints, imgpoints, shape):
     """returns calibration parameters with given position of points on image
-    and in 3d space, can be used for any type of distortion"""
+    and in 3d space, can be used for any type of distortion
+    """
+
     ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(
         objpoints, imgpoints, shape[::-1], None, None
     )
@@ -117,15 +124,18 @@ def general_calibration(objpoints, imgpoints, shape):
 
 def calib_from_img_dir(
     dirpaths: list or str, file_ext=".jpg", silent=False, number=100
-):
+) -> None:
     """calculates calibration parametres (mtr, dist, rvecs, tvecs, optimised_mtx)
     from a directory of images while sorting good ones manually
     """
+    # if only one directory is given, convert it to a list
     if isinstance(dirpaths, str):
         dirpaths = [dirpaths]
 
     objpoints = []
     imgpoints = []
+
+    # going thorught all the images in the directory
     for dirpath in dirpaths:
         images = glob.glob(f"{dirpath}/*{file_ext}")
         for fname in images:
@@ -133,25 +143,30 @@ def calib_from_img_dir(
             print("frame")
             # cv2.imshow("img", img)
             img_dimension = img.shape[:-1]
+
+            # cheching if the image can be used for calibration
             ret, each_objpoints, each_imgpoints = process(img, criteria, flags=flags)
 
-            if ret == True:  # noqa: E712
+            if ret == True:
                 print(fname)
 
                 if silent:
                     continue
 
+                # manual sorting of good images
                 cv2.drawChessboardCorners(img, (7, 6), each_imgpoints, ret)
                 cv2.imshow("image", img)
                 key = cv2.waitKey()
                 if key == ord("q"):
                     return
                 elif key == ord("y"):
+                    # y to save, any other to skip
                     objpoints.append(each_objpoints)
                     imgpoints.append(each_imgpoints)
                 else:
                     continue
 
+    # calculating calibration parameters using the imgaes selected
     ret, mtx, dist, rvecs, tvecs = general_calibration(
         objpoints, imgpoints, img_dimension
     )
@@ -163,10 +178,12 @@ def calib_from_img_dir(
 
     img = cv2.undistort(img, mtx, dist, None, newcameramtx)
 
+    # saving the calibration parameters
     mtx.tofile(f"calibration_data/mtx_{number}.dat")
     dist.tofile(f"calibration_data/dist_{number}.dat")
     newcameramtx.tofile(f"calibration_data/opt_mtx_{number}.dat")
 
+    # preview of the undistorted image
     cv2.imshow("calib_img", img)
 
     cv2.waitKey()
@@ -174,26 +191,32 @@ def calib_from_img_dir(
 
 def sort_img(path_to_imgs, file_ext=".jpg", silent=False):
     "for sorting good images and bad ones from calibration images"
+
+    # going thorugh images
     images = glob.glob(f"{path_to_imgs}/*{file_ext}")
     for fname in images:
         img = cv2.imread(fname)
         print("frame")
         cv2.imshow("img", img)
         img_dimension = img.shape[:-1]
+
+        # cheching if the image can be used for calibration
         ret, each_objpoints, each_imgpoints = process(img, criteria, flags=flags)
 
-        if ret == True:  # noqa: E712
+        if ret == True:
             print(fname)
 
             if silent:
                 continue
 
+            # manual sorting of good images
             cv2.drawChessboardCorners(img, (7, 6), each_imgpoints, ret)
             cv2.imshow("image", img)
             key = cv2.waitKey()
             if key == ord("q"):
                 return
             elif key == ord("y"):
+                # y to save, any other to skip
                 shutil.copy(fname, "successful_imgs")
             else:
                 continue
@@ -212,6 +235,7 @@ def test_cal_val(number=6, alpha=1):
         alpha value for undistort function, by default 1
         when 0 shows no void in undistoreted img
     """
+    # loaing calibration data
     mtx = np.fromfile(f"calibration_data/mtx_{number}.dat")
     dist = np.fromfile(f"calibration_data/dist_{number}.dat")
     opt_mtx = np.fromfile(f"calibration_data/opt_mtx_{number}.dat")
@@ -228,12 +252,13 @@ def test_cal_val(number=6, alpha=1):
 
     img = cv2.undistort(img, mtx, dist, None, newcameramtx)
 
+    # preview of the undistorted image
     cv2.imshow("after", img)
     cv2.waitKey()
 
 
 def undistorted_live_feed(num=2):
-    "gives live feed of undistorted image"
+    """gives live feed of undistorted image"""
     video = cv2.VideoCapture("http://localhost:8081/stream/video.mjpeg")
 
     ret = False
@@ -246,6 +271,7 @@ def undistorted_live_feed(num=2):
     while True:
         check, img = video.read()
 
+        # undistort then show
         img = cv2.undistort(img, mtx, dist, None, newcameramtx)
         cv2.imshow("feed", img)
 
@@ -254,12 +280,14 @@ def undistorted_live_feed(num=2):
             return
 
 
-def undistort_frame(img):
-    "function to undistort a frame/image"
-    mtx, dist, new_mtx = load_vals(6)
+def undistort_frame(img, num=6):
+    "function to undistort a still frame/image"
+    # loading data
+    mtx, dist, new_mtx = load_vals(num)
     h, w = img.shape[:2]
     # newcameramtx, roi = cv2.getOptimalNewCameraMatrix(mtx, dist, (w, h), 1, (w, h))
 
+    # undistorting the image
     img = cv2.undistort(img, mtx, dist, None, new_mtx)
     return img
 
@@ -271,6 +299,7 @@ def perspective_transoformation(img, dim):
     win_name = "select 4 corners of the tables from bottom to top in left right order"
 
     def click_envent(event, x, y, flags, params):
+        "callback function for mouse click event"
         if event == cv2.EVENT_LBUTTONDOWN:
             print(x, y)
             points.append((x, y))
@@ -281,7 +310,8 @@ def perspective_transoformation(img, dim):
 
     cv2.imshow(win_name, img)
     cv2.setMouseCallback(win_name, click_envent)
-    key = cv2.waitKey()
+    cv2.waitKey()
+
     points = np.float32(points)
     new_points = np.float32([(0, 0), (0, dim[1]), (dim[0], 0), dim])
 

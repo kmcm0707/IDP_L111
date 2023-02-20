@@ -44,12 +44,14 @@ if "pupil_apriltags" not in sys.modules and "apriltag" not in sys.modules:
     raise ModuleNotFoundError("neither apriltag detection module installed")
 
 
-"""The following code is used to connect to the MQTT broker"""
+# The following code is used to connect to the MQTT broker
+
 # mqttBroker = "broker.hivemq.com"
 # Alternative message brokers:
 # mqttBroker = "public.mqtthq.com"
 mqttBroker = "test.mosquitto.org"
 # mqttBroker =  "public.mqtthq.com"
+
 client = mqtt.Client("Python")
 client.connect(mqttBroker)
 client.subscribe("IDP_2023_Color")
@@ -257,7 +259,7 @@ def move_to(
         If True the robot will use the ultrasound sensor to detect obstacles, by default False
     """
 
-    """Initialising variables"""
+    # Initialising variables
     print("hello")
     ultra_time = time.time()
     moving_forward = False
@@ -268,6 +270,7 @@ def move_to(
 
     # client.publish("IDP_2023_Servo_Horizontal", 1)
     # client.publish("IDP_2023_Servo_Vertical", 1)
+
     while True:
         if time.time() - ultra_time > 2 and ultra:
             client.publish("IDP_2023_Set_Ultrasound", 0)
@@ -299,7 +302,7 @@ def move_to(
                 print("done")
                 break
 
-            """if the robot is facing the target point"""
+            # if the robot is facing the target point
             if (
                 angle_diff < angle_threshold
                 or angle_diff > (2 * math.pi) - angle_threshold
@@ -656,8 +659,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-    """video = cv2.VideoCapture("http://localhost:8081/stream/video.mjpeg")
-    detect_red_video(video.read()[1].copy())
-    video.release()
-    cv2.destroyAllWindows()"""
