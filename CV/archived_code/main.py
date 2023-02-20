@@ -2,8 +2,8 @@
 # coding: utf-8
 # python 3.9.16
 
-"""Main code for computer vision comaints code for detection for cube, line or ar tag
-"""
+"""This was the original code that was used to test computer vision and the apriltag detection. 
+It is not used in the final product, but is kept for reference purposes and used to show how the code evolved over time."""
 
 import sys
 import time
@@ -130,14 +130,13 @@ def detect_line(frame):
 def detect_red(frame):
     "for detecting red cube in an image"
 
-    # TODO: do the processing in particular section of the image
 
     font = cv2.FONT_HERSHEY_COMPLEX
 
     # Convert BGR to HSV
     hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 
-    # define range of blue color in HSV
+    # define range of red color in HSV
 
     lower_red = np.array([120, 70, 80])
 
@@ -145,7 +144,7 @@ def detect_red(frame):
 
     upper_red = np.array([180, 255, 255])
 
-    # Threshold the HSV image to get only blue colours
+    # Threshold the HSV image to get only red colours
     mask = cv2.inRange(hsv, lower_red, upper_red)
 
     kernel = np.ones((7, 7), np.uint8)
@@ -396,7 +395,7 @@ def apriltag_detector_procedure(
     alpha: int, optional
         if 0 then undistorted images shows no void
     """
-
+    
     if fix_distortion or fix_perspective:
         mtx, dist, newcameramtx = cal.load_vals(6)
 
@@ -548,6 +547,7 @@ def PID_controller(
     target_position: np.ndarray,
     predicted_position: np.ndarray,
 ):
+    """An early version of the PID controller that was fully implemented in moveToPoint_PID.py"""
     k_i = 0.001
     k_p = 30
     k_d = 10
