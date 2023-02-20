@@ -2,8 +2,7 @@
 # coding: utf-8
 # python 3.9.16
 
-"""Main code for computer vision comaints code for detection for cube, line or ar tag
-"""
+"""It was an attempt to imporve the moveToPoint code using a controller class however it was never used."""
 
 import sys
 import time
