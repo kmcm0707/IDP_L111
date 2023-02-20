@@ -2,8 +2,7 @@
 # coding: utf-8
 # python 3.9.16
 
-"""Main code for computer vision comaints code for detection for cube, line or ar tag
-"""
+"""Main code for computer vision code for detection for cube, line or ar tag"""
 
 import sys
 import time
