@@ -381,7 +381,7 @@ def main():
     detector = apriltag.Detector(option)
     detect = detector.detect
 
-    """Set of target points for the robot to move to"""
+    # Set of target points for the robot to move to
     targets = np.array(
         [
             [740, 560],  # ramp
@@ -401,10 +401,10 @@ def main():
     frame = cv2.undistort(frame, mtx, dist, None, newcameramtx)
     dim = (810, 810)
     M = perspective_transoformation(frame, dim)
-    
-    """While the robot has not collected 2 blocks"""
+
+    # While the robot has not collected 2 blocks
     while blocks_collected < 2:
-        """Get the frame from the video feed"""
+        # Get the frame from the video feed
         frame = video_getter.frame
         frame = cv2.undistort(frame, mtx, dist, None, newcameramtx)
         dim = (810, 810)
@@ -415,18 +415,19 @@ def main():
         except:
             print("no red")
 
-        """Lifts and closes the claw"""
+        # Lifts and closes the claw
         client.publish("IDP_2023_Servo_Horizontal", 1)
         client.publish("IDP_2023_Servo_Vertical", 2)
 
-        """Moves to the ramp and goes over it"""
+        # Moves to the ramp and goes over it
         move_to(targets[0], video_getter, mtx, dist, newcameramtx, dim, M, detect)
         move_to(targets[1], video_getter, mtx, dist, newcameramtx, dim, M, detect)
 
-        """lowers the claw and opens it"""
+        # lowers the claw and opens it
         client.publish("IDP_2023_Servo_Vertical", 0)
         client.publish("IDP_2023_Servo_Horizontal", 0)
         time.sleep(5)
+
         # detects the red block
         frame = video_getter.frame
         frame = cv2.undistort(frame, mtx, dist, None, newcameramtx)
@@ -435,6 +436,7 @@ def main():
             targets[2] = detect_red(frame)
         except:
             print("no red")
+
         # now moves to red block
         # a rotate only is added to make sure the robot is facing the block and make it more accurate
         move_to(
@@ -447,7 +449,7 @@ def main():
             M,
             detect,
             only_rotate=True,
-            angle_threshold=0.1, ## more precise
+            angle_threshold=0.1,  # more precise
             rotate_speed=140,
         )
         move_to(
@@ -459,19 +461,19 @@ def main():
             dim,
             M,
             detect,
-            angle_threshold=0.1, ## more precise
-            encatchment_radius=40, ## larger radius so can actually catch the block
+            angle_threshold=0.1,  # more precise
+            encatchment_radius=40,  # larger radius so can actually catch the block
         )
 
-        ## close claw
+        # close claw
         client.publish("IDP_2023_Servo_Horizontal", 1)
         time.sleep(2)
 
-        ## lifts claw to middle position (so can fit through tunnel) and tells arduino to detect color
+        # lifts claw to middle position (so can fit through tunnel) and tells arduino to detect color
         client.publish("IDP_2023_Servo_Vertical", 2)
         client.publish("IDP_2023_Set_Block", 1)
 
-        ## wait for color to be detected and message to be sent from arduino
+        # wait for color to be detected and message to be sent from arduino
         client.loop_start()
         time.sleep(3)
         red = False
@@ -493,7 +495,7 @@ def main():
         client.loop_stop()
         color = None
 
-        ## tunnel
+        # tunnel
         move_to(targets[3], video_getter, mtx, dist, newcameramtx, dim, M, detect)
         # client.publish("IDP_2023_Set_Ultrasound", 1)
         move_to(
@@ -519,12 +521,14 @@ def main():
             detect,
             # ultra=True,
         )
-
         # client.publish("IDP_2023_Set_Ultrasound", 0)
-        """Lifts claw fully"""
+
+        # Lifts claw fully
         client.publish("IDP_2023_Servo_Vertical", 3)
-        ## move to put down areas and rotate to face the correct direction
+
+        # move to put down areas and rotate to face the correct direction
         if red:
+            # when the cube is red
             targets_red = np.array(
                 [[622, 719], [635, 804]],
             )
@@ -562,17 +566,21 @@ def main():
                 only_rotate=True,
                 angle_threshold=0.2,
             )
-            """Opens claw to drop block"""
+
+            # Opens claw to drop block
             client.publish("IDP_2023_Servo_Horizontal", 0)
             time.sleep(1)
-            """reverse to get out of the way"""
+
+            # reverse to get out of the way
             client.publish("IDP_2023_Follower_left_speed", -255)
             client.publish("IDP_2023_Follower_right_speed", -255)
             time.sleep(5)
             client.publish("IDP_2023_Follower_left_speed", 0)
             client.publish("IDP_2023_Follower_right_speed", 0)
             red = False
+
         elif blue:
+            # when the cube is blue
             targets_blue = np.array(
                 [[191, 719], [183, 804]],
             )
@@ -610,10 +618,12 @@ def main():
                 only_rotate=True,
                 angle_threshold=0.2,
             )
-            """Opens claw to drop block"""
+
+            # Opens claw to drop block
             client.publish("IDP_2023_Servo_Horizontal", 0)
             time.sleep(1)
-            """reverse to get out of the way"""
+
+            # reverse to get out of the way
             client.publish("IDP_2023_Follower_left_speed", -255)
             client.publish("IDP_2023_Follower_right_speed", -255)
             time.sleep(5)
@@ -622,10 +632,12 @@ def main():
             blue = False
 
         blocks_collected += 1
-    """Finished so moves to the end zone"""
+
+    # "Finished so moves to the end zone
     move_to(targets[7], video_getter, mtx, dist, newcameramtx, dim, M, detect)
     move_to(targets[8], video_getter, mtx, dist, newcameramtx, dim, M, detect)
-    """Rotates so fully in the end zone"""
+
+    # Rotates so fully in the end zone
     move_to(
         targets[9],
         video_getter,
@@ -644,6 +656,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
     """video = cv2.VideoCapture("http://localhost:8081/stream/video.mjpeg")
     detect_red_video(video.read()[1].copy())
     video.release()
